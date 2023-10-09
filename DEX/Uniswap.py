@@ -37,11 +37,18 @@ if __name__ == '__main__':
     load_dotenv()
     network = os.environ['INFURA_MAINNET']
     Uniswap = UniswapExchange(network)
-    link_token = BaseToken(address='0x514910771AF9Ca656af840dff83E8264EcF986CA', name='Chainlink',
-                           symbol='LINK', decimals=18)
+    # Uniswap.web3_client.eth.contract()
+    # factory = get_contract(Uniswap.web3_client, abi_name='Uniswap-v3/Factory')
+    # print(factory.functions.tokenCount().call())
+    # link_token = BaseToken(address='0x514910771AF9Ca656af840dff83E8264EcF986CA', name='Chainlink',
+    #                        symbol='LINK', decimals=18)
+    weth = BaseToken(address=Uniswap.weth_addr, name='WETH', symbol='WETH', decimals=18)
     usdt_token = BaseToken(address='0xdAC17F958D2ee523a2206206994597C13D831ec7', name='Tether',
                            symbol='USDT', decimals=6)
-    sell_price = Uniswap._get_sell_price(link_token, usdt_token, 1)
+    sell_price = Uniswap._get_sell_price(weth, usdt_token, 1)
     print(sell_price)
-    buy_price = Uniswap._get_buy_price(link_token, usdt_token, 1)
+    buy_price = Uniswap._get_buy_price(weth, usdt_token, 1)
     print(buy_price)
+
+    Uniswap.get_token('0x514910771AF9Ca656af840dff83E8264EcF986CA')
+

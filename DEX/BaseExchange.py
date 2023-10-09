@@ -1,4 +1,6 @@
 from web3 import Web3
+from utils import get_contract
+from BaseToken import BaseToken
 
 
 class BaseExchange:
@@ -28,4 +30,15 @@ class BaseExchange:
             if fee < 0:
                 raise ValueError('Fee can not be negative')
             self._fee = fee
+
+    def get_token(self, address: str, abi_name='erc20'):
+        """
+        Retrieves info about a ERC20 contract of a given token
+        name, symbol, and decimals.
+        """
+        token_contract = get_contract(self.web3_client, abi_name=abi_name, address=address)
+        name = token_contract.functions.name().call()
+        symbol = token_contract.functions.symbol().call()
+        decimals = token_contract.functions.decimals().call()
+        return name, symbol, decimals
 

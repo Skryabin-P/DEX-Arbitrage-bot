@@ -9,11 +9,13 @@ def _get_abi(abi_name: str):
         abi = json.load(file)
     return abi
 
-def get_contract(w3: Web3, abi_name: str):
+
+def get_contract(w3: Web3, abi_name: str, address=None):
     contract_name = Path(abi_name).name
     abi_path = Path(abi_name).parent
-    with open(f'ABI/{abi_path}/contract_addresses.json', 'r') as file:
-        address = json.load(file)[contract_name]
+    if address is None:
+        with open(f'ABI/{abi_path}/contract_addresses.json', 'r') as file:
+            address = json.load(file)[contract_name]
     abi = _get_abi(abi_name)
     return w3.eth.contract(address, abi=abi)
 
