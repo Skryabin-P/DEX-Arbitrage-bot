@@ -40,5 +40,5 @@ class BaseExchange:
         name = token_contract.functions.name().call()
         symbol = token_contract.functions.symbol().call()
         decimals = token_contract.functions.decimals().call()
-        return name, symbol, decimals
+        return BaseToken(name=name, address=address, symbol=symbol, decimals=decimals)
 
