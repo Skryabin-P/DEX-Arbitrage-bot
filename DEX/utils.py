@@ -1,4 +1,4 @@
-from web3 import Web3
+from web3 import Web3, AsyncWeb3
 import json
 from pathlib import Path
 
@@ -10,7 +10,7 @@ def _get_abi(abi_name: str):
     return abi
 
 
-def get_contract(w3: Web3, abi_name: str, address=None):
+def get_contract(w3: Web3 | AsyncWeb3, abi_name: str, address=None):
     contract_name = Path(abi_name).name
     abi_path = Path(abi_name).parent
     if address is None:

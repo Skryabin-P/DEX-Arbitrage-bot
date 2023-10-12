@@ -17,7 +17,8 @@ class BaseToken:
     def decimals(self, value):
         if not isinstance(value, int):
             self._decimals = int(value)
-        self._decimals = value
+        else:
+            self._decimals = value
 
     @property
     def address(self):

@@ -1,6 +1,7 @@
-from BaseExchange import BaseExchange
-from BaseToken import BaseToken
-from utils import get_contract
+import asyncio
+from .BaseExchange import BaseExchange
+from .BaseToken import BaseToken
+from .utils import get_contract
 import requests
 
 
@@ -11,24 +12,28 @@ class UniswapExchange(BaseExchange):
         self._pair_list = None
 
     @property
-    def quoter_contract(self):
+    def quoter(self):
         return get_contract(self.web3_client, abi_name='Uniswap-v3/Quoter')
+
+    @property
+    def quoter_async(self):
+        return get_contract(self.web3_client_async, abi_name='Uniswap-v3/Quoter')
 
     @property
     def weth_addr(self):
         if self._weth_addr is None:
-            self._weth_addr = self.quoter_contract.functions.WETH9().call()
+            self._weth_addr = self.quoter.functions.WETH9().call()
         return self._weth_addr
 
     def _get_sell_price(self, base_asset: BaseToken, quote_asset: BaseToken, amount: int):
         converted_amount = amount * 10 ** base_asset.decimals
-        sell_price = self.quoter_contract.functions.quoteExactInputSingle(
+        sell_price = self.quoter.functions.quoteExactInputSingle(
             base_asset.address, quote_asset.address, self.fee, converted_amount, 0).call() / amount
         return sell_price / 10 ** quote_asset.decimals
 
     def _get_buy_price(self, base_asset: BaseToken, quote_asset: BaseToken, amount):
         converted_amount = amount * 10 ** base_asset.decimals
-        buy_price = self.quoter_contract.functions.quoteExactOutputSingle(
+        buy_price = self.quoter.functions.quoteExactOutputSingle(
             quote_asset.address, base_asset.address, self.fee, converted_amount, 0).call() / amount
         return buy_price / 10 ** quote_asset.decimals
 
@@ -68,18 +73,16 @@ class UniswapExchange(BaseExchange):
 if __name__ == '__main__':
     import os
     from dotenv import load_dotenv
-
+    import asyncio
     load_dotenv()
     network = os.environ['INFURA_MAINNET']
     Uniswap = UniswapExchange(network)
-    # Uniswap.web3_client.eth.contract()
-    # factory = get_contract(Uniswap.web3_client, abi_name='Uniswap-v3/Factory')
-    # print(factory.functions.tokenCount().call())
-    # link_token = BaseToken(address='0x514910771AF9Ca656af840dff83E8264EcF986CA', name='Chainlink',
-    #                        symbol='LINK', decimals=18)
     weth = BaseToken(address=Uniswap.weth_addr, name='WETH', symbol='WETH', decimals=18)
     usdt_token = BaseToken(address='0xdAC17F958D2ee523a2206206994597C13D831ec7', name='Tether',
                            symbol='USDT', decimals=6)
+
+
+
 
     for pair in Uniswap.pair_list:
         token0 = BaseToken(**Uniswap.pair_list[pair]['base_asset'])
@@ -87,6 +90,7 @@ if __name__ == '__main__':
         sell_price = Uniswap._get_sell_price(token0, token1, 10)
         buy_price = Uniswap._get_buy_price(token0, token1, 10)
         print(f'{pair} {buy_price} {sell_price}')
+
     # sell_price = Uniswap._get_sell_price(weth, usdt_token, 1)
     # print(sell_price)
     # buy_price = Uniswap._get_buy_price(weth, usdt_token, 1)
