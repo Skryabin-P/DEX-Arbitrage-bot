@@ -1,7 +1,9 @@
 import asyncio
-from .BaseExchange import BaseExchange
-from .BaseToken import BaseToken
-from .utils import get_contract
+import time
+
+from BaseExchange import BaseExchange
+from BaseToken import BaseToken
+from utils import get_contract
 import requests
 
 
@@ -10,7 +12,7 @@ class UniswapExchange(BaseExchange):
         super().__init__(network, fee)
         self._weth_addr = None
         self._pair_list = None
-
+        self._price_book = None
     @property
     def quoter(self):
         return get_contract(self.web3_client, abi_name='Uniswap-v3/Quoter')
@@ -25,20 +27,43 @@ class UniswapExchange(BaseExchange):
             self._weth_addr = self.quoter.functions.WETH9().call()
         return self._weth_addr
 
-    def _get_sell_price(self, base_asset: BaseToken, quote_asset: BaseToken, amount: int):
+    async def _get_sell_price(self, base_asset: BaseToken, quote_asset: BaseToken, amount: int):
         converted_amount = amount * 10 ** base_asset.decimals
         sell_price = self.quoter.functions.quoteExactInputSingle(
             base_asset.address, quote_asset.address, self.fee, converted_amount, 0).call() / amount
         return sell_price / 10 ** quote_asset.decimals
 
-    def _get_buy_price(self, base_asset: BaseToken, quote_asset: BaseToken, amount):
+    async def _get_buy_price(self, base_asset: BaseToken, quote_asset: BaseToken, amount):
         converted_amount = amount * 10 ** base_asset.decimals
         buy_price = self.quoter.functions.quoteExactOutputSingle(
             quote_asset.address, base_asset.address, self.fee, converted_amount, 0).call() / amount
         return buy_price / 10 ** quote_asset.decimals
 
+    async def update_price_book(self):
+        print('Update price book')
+        t1 = time.perf_counter()
+        tasks = []
+        pairs = []
+        quotes = {}
+        for pair, tokens in self.pair_list.items():
+            base_asset = BaseToken(**tokens['base_asset'])
+            quote_asset = BaseToken(**tokens['quote_asset'])
+            buy_task = asyncio.create_task(self._get_buy_price(base_asset, quote_asset, 10))
+            sell_task = asyncio.create_task(self._get_sell_price(base_asset, quote_asset, 10))
+            tasks.append(buy_task)
+            tasks.append(sell_task)
+            pairs.append(pair)
+        prices = await asyncio.gather(*tasks)
+        for i in range(0, len(prices), 2):
+            pair = pairs[i//2]
+            quotes[pair] = {'buy_price': prices[i],
+                            'sell_price': prices[i+1]}
+        self._price_book = quotes
+        t2 = time.perf_counter()
+        print(f'It took {t2-t1}s')
     @staticmethod
     def _fetch_top_volume_pools(pools_number: int):
+
         query = "{pools(first: %s, orderBy: volumeUSD, orderDirection: desc)" \
                 " {id " \
                 "token0 {id name symbol decimals }" \
@@ -49,6 +74,7 @@ class UniswapExchange(BaseExchange):
 
     @property
     def pair_list(self):
+        print('Get pairlist')
         if self._pair_list is None:
             self._pair_list = {}
             top_pools = self._fetch_top_volume_pools(10)
@@ -76,20 +102,20 @@ if __name__ == '__main__':
     import asyncio
     load_dotenv()
     network = os.environ['INFURA_MAINNET']
-    Uniswap = UniswapExchange(network)
+    Uniswap = UniswapExchange(network, fee=500)
     weth = BaseToken(address=Uniswap.weth_addr, name='WETH', symbol='WETH', decimals=18)
     usdt_token = BaseToken(address='0xdAC17F958D2ee523a2206206994597C13D831ec7', name='Tether',
                            symbol='USDT', decimals=6)
 
 
-
-
-    for pair in Uniswap.pair_list:
-        token0 = BaseToken(**Uniswap.pair_list[pair]['base_asset'])
-        token1 = BaseToken(**Uniswap.pair_list[pair]['quote_asset'])
-        sell_price = Uniswap._get_sell_price(token0, token1, 10)
-        buy_price = Uniswap._get_buy_price(token0, token1, 10)
-        print(f'{pair} {buy_price} {sell_price}')
+    asyncio.run(Uniswap.update_price_book())
+    print(Uniswap._price_book)
+    # for pair in Uniswap.pair_list:
+    #     token0 = BaseToken(**Uniswap.pair_list[pair]['base_asset'])
+    #     token1 = BaseToken(**Uniswap.pair_list[pair]['quote_asset'])
+    #     sell_price = Uniswap._get_sell_price(token0, token1, 10)
+    #     buy_price = Uniswap._get_buy_price(token0, token1, 10)
+    #     print(f'{pair} {buy_price} {sell_price}')
 
     # sell_price = Uniswap._get_sell_price(weth, usdt_token, 1)
     # print(sell_price)
