@@ -1,4 +1,5 @@
 from web3 import Web3, AsyncWeb3
+from web3._utils.contracts import encode_abi
 from utils import get_contract
 from BaseToken import BaseToken
 import asyncio
