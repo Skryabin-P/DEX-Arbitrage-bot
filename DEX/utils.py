@@ -1,8 +1,10 @@
+import time
 from web3 import Web3, AsyncWeb3
 import json
 from pathlib import Path
 from web3.types import ABIFunction, Address
 from eth_utils import encode_hex, function_abi_to_4byte_selector
+from functools import wraps
 
 
 def _get_abi(abi_name: str):
@@ -26,6 +28,7 @@ def get_contract(w3: Web3 | AsyncWeb3, abi_name: str, address=None):
     return w3.eth.contract(address, abi=abi)
 
 
+
 def get_function_abi(abi_name, func_name: str) -> ABIFunction:
     abi = _get_abi(abi_name)
     for function in abi:
@@ -37,6 +40,16 @@ def get_function_abi(abi_name, func_name: str) -> ABIFunction:
 def encode_function_abi(abi_function: ABIFunction):
     return encode_hex(function_abi_to_4byte_selector(abi_function))
 
+def exec_time(func):
+    @wraps(func)
+    def exec_time_wrapper(*args, **kwargs):
+        start_time = time.perf_counter()
+        result = func(*args, **kwargs)
+        end_time = time.perf_counter()
+        execution_time = end_time - start_time
+        print(f'{func.__name__} took {execution_time}s')
+        return result
+    return exec_time_wrapper
 
 if __name__ == '__main__':
     from dotenv import load_dotenv
