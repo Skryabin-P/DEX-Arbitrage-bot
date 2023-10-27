@@ -17,6 +17,7 @@ def _get_abi(abi_name: str):
 def get_contract_address(abi_name: str):
     contract_name = Path(abi_name).name
     abi_path = Path(abi_name).parent
+
     with open(f'ABI/{abi_path}/contract_addresses.json', 'r') as file:
         address = json.load(file)[contract_name]
     return address
@@ -54,13 +55,21 @@ def exec_time(func):
 if __name__ == '__main__':
     from dotenv import load_dotenv
     import os
-
+    from BaseToken import BaseToken
+    from UniswapV3 import UniswapV3
     quotes_input_abi = get_function_abi('Uniswap-v3/Quoter', 'quoteExactInputSingle')
     print(encode_function_abi(quotes_input_abi))
     load_dotenv()
-    INFURA_MAINNET = os.environ['INFURA_MAINNET']
+    INFURA_MAINNET = os.environ['INFURA_ARBITRUM']
     INFURA_API_KEY = os.environ['INFURA_API_KEY']
     w3 = Web3(Web3.HTTPProvider(INFURA_MAINNET))
     contr = get_contract(w3, abi_name='Uniswap-v3/Quoter')
-    print(contr.encodeABI(fn_name='quoteExactInputSingle', args=('0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6','0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6',500, 10000,0) ))
+    client = UniswapV3(INFURA_MAINNET)
+    print(client.weth_addr)
+    base_asset = BaseToken(name="WETH", address=client.weth_addr, decimals=18)
+    quote_asset = BaseToken(name="USDT", address="0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9",
+                            decimals=6)
+    a = contr.functions.quoteExactInputSingle(base_asset.address, quote_asset.address, 3000, 1000000000000000, 0).call()
+    print(a)
+    # print(contr.encodeABI(fn_name='quoteExactInputSingle', args=('0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6','0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6',500, 10000,0) ))
 # ValueError: Unknown unit.  Must be one of wei/kwei/babbage/femtoether/mwei/lovelace/picoether/gwei/shannon/nanoether/nano/szabo/microether/micro/finney/milliether/milli/ether/kether/grand/mether/gether/tether

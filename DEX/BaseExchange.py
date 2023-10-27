@@ -14,7 +14,8 @@ class BaseExchange:
         self.web3_client_async = AsyncWeb3(Web3.AsyncHTTPProvider(self.network))
         self.fee = fee
         self._price_book = None
-
+        self._pair_list = None
+        self._weth_addr = None
     @property
     def network(self):
         return self._network

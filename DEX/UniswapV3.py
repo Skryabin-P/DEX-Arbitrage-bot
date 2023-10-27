@@ -9,12 +9,10 @@ import requests
 class UniswapV3(BaseExchange):
     def __init__(self, network, fee=None):
         super().__init__(network, fee)
-        self._weth_addr = None
-        self._pair_list = None
         self._quoter = None
         self._multicall = None
         self._quoter_output_types = None
-
+        self._quoter_calls = None
     @property
     def quoter(self):
         # Quoter contract on Uniswap
@@ -71,17 +69,19 @@ class UniswapV3(BaseExchange):
                                            base_asset.address,
                                            self.fee, converted_amount, 0))
 
-    def _aggregate_quoter_calls(self, amount) -> list[tuple]:
+    @property
+    def quoter_calls(self) -> list[tuple]:
         # amount means amount of coins
-        _quoter_calls = []
-        for tokens in self.pair_list.values():
-            base_asset = tokens['base_asset']
-            quote_asset = tokens['quote_asset']
-            buy_call = self._encode_buy_price_func(base_asset, quote_asset, amount)
-            sell_call = self._encode_sell_price_func(base_asset, quote_asset, amount)
-            _quoter_calls.append((self.quoter.address, buy_call))
-            _quoter_calls.append((self.quoter.address, sell_call))
-        return _quoter_calls
+        if self._quoter_calls is None:
+            self._quoter_calls = []
+            for tokens in self.pair_list.values():
+                base_asset = tokens['base_asset']
+                quote_asset = tokens['quote_asset']
+                buy_call = self._encode_buy_price_func(base_asset, quote_asset, 1)
+                sell_call = self._encode_sell_price_func(base_asset, quote_asset, 1)
+                self._quoter_calls.append((self.quoter.address, buy_call))
+                self._quoter_calls.append((self.quoter.address, sell_call))
+        return self._quoter_calls
 
     @exec_time
     def decode_multicall_quoter(self, multicall_raw_data):
@@ -97,18 +97,17 @@ class UniswapV3(BaseExchange):
                             'sell_price': sell_price / 10 ** quote_asset_decimals}
         return quotes
 
-    @exec_time
     def update_price_book(self, amount):
 
         print('Update price book')
-        quoter_calls = self._aggregate_quoter_calls(amount)
+
 
         multicall_raw_data = self.multicall.functions.tryAggregate(
-            False, quoter_calls).call()
+            False, self.quoter_calls).call()
 
         self.price_book = self.decode_multicall_quoter(multicall_raw_data)
 
-    def _fetch_top_volume_pools(self, pools_number: int):
+    def _fetch_top_volume_pools(self, pools_number: int, network=None):
 
         query = "{pools(first: %s, orderBy: volumeUSD, " \
                 "orderDirection: desc where: {feeTier:%s})" \
@@ -124,12 +123,11 @@ class UniswapV3(BaseExchange):
         if self._pair_list is None:
             print('Getting pairlist...')
             self._pair_list = {}
-            top_pools = self._fetch_top_volume_pools(100)
+            top_pools = self._fetch_top_volume_pools(3)
             for pool in top_pools['data']['pools']:
                 pair_name = f"{pool['token0']['symbol']}-{pool['token1']['symbol']}"
-                # address0 = self.web3_client.to_checksum_address(pool['token0']['id'])
-                # address1 = self.web3_client.to_checksum_address(pool['token1']['id'])
                 if pair_name not in self._pair_list.keys():
+
                     token0 = BaseToken(name=pool['token0']['name'],
                                        address=pool['token0']['id'],
                                        symbol=pool['token0']['symbol'],
@@ -164,3 +162,8 @@ if __name__ == '__main__':
     # TODO: Think about gas fee... seems it can be calculated before transaction sending. QuoterV2 !!!
     #  it returns estimate gas, sqrtprice after and so on
     # TODO: Think about quoter amount, how to calculate , may be set amount in usdt and then transform to tokens amount
+    # TODO: May be get balances in pool and take price for only 5-10% in depth for each pair
+
+    # TODO: !!! GET TOKEN PAIRS FOR EVERY NETWORK SEPARATELY
+
+
