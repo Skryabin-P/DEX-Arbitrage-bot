@@ -69,7 +69,7 @@ class UniswapV2(BaseExchange):
     def router_output_types(self) -> list[str]:
         """
         I decided to use getAmountsIn for getting types,
-        because it has the same types as getAmountsIn
+        because it has the same types as getAmountsOut
 
         return: list of string representation of types for decoding
         after multicall
@@ -83,7 +83,7 @@ class UniswapV2(BaseExchange):
     @staticmethod
     def _fetch_top_volume_pairs(pools_number: int):
 
-        query = "{pairs(first: %s, orderBy: volumeUSD  orderDirection: desc)" \
+        query = "{pairs(first: %s, orderBy: reserveUSD  orderDirection: desc)" \
                 " {id " \
                 "token0 {id name symbol decimals }" \
                 "token1 { id name symbol decimals } } }" % pools_number
@@ -100,7 +100,6 @@ class UniswapV2(BaseExchange):
             sell_price = self.web3_client.codec.decode(
                 self.router_output_types, multicall_raw_data[i + 1][1])[0][1]
             pair = list(self.pair_list.keys())[i // 2]
-            print(pair)
             quote_asset_decimals = self.pair_list[pair]['quote_asset'].decimals
             quotes[pair] = {'buy_price': buy_price / 10 ** quote_asset_decimals,
                             'sell_price': sell_price / 10 ** quote_asset_decimals}
