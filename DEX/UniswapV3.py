@@ -13,6 +13,7 @@ class UniswapV3(BaseExchange):
         self._multicall = None
         self._quoter_output_types = None
         self._quoter_calls = None
+
     @property
     def quoter(self):
         # Quoter contract on Uniswap
@@ -87,20 +88,28 @@ class UniswapV3(BaseExchange):
     def decode_multicall_quoter(self, multicall_raw_data):
         quotes = {}
         for i in range(0, len(multicall_raw_data), 2):
-            buy_price = self.web3_client.codec.decode(
-                self.quoter_output_types, multicall_raw_data[i][1])[0]
-            sell_price = self.web3_client.codec.decode(
-                self.quoter_output_types, multicall_raw_data[i + 1][1])[0]
-            pair = list(self.pair_list.keys())[i // 2]
+            buy_price = None
+            sell_price = None
+            buy_call_success = multicall_raw_data[i][0]
+            sell_call_success = multicall_raw_data[i + 1][0]
+            pair = list(self.pair_list.keys())[i // 2]  # just pair name
             quote_asset_decimals = self.pair_list[pair]['quote_asset'].decimals
-            quotes[pair] = {'buy_price': buy_price / 10 ** quote_asset_decimals,
+            if buy_call_success:
+                buy_price = self.web3_client.codec.decode(
+                    self.quoter_output_types,
+                    multicall_raw_data[i][1])[0] / 10 ** quote_asset_decimals
+            if sell_call_success:
+                sell_price = self.web3_client.codec.decode(
+                    self.quoter_output_types,
+                    multicall_raw_data[i + 1][1])[0] / 10 ** quote_asset_decimals
+
+            quotes[pair] = {'buy_price': buy_price,
                             'sell_price': sell_price / 10 ** quote_asset_decimals}
         return quotes
 
     def update_price_book(self, amount):
 
         print('Update price book')
-
 
         multicall_raw_data = self.multicall.functions.tryAggregate(
             False, self.quoter_calls).call()
@@ -127,7 +136,6 @@ class UniswapV3(BaseExchange):
             for pool in top_pools['data']['pools']:
                 pair_name = f"{pool['token0']['symbol']}-{pool['token1']['symbol']}"
                 if pair_name not in self._pair_list.keys():
-
                     token0 = BaseToken(name=pool['token0']['name'],
                                        address=pool['token0']['id'],
                                        symbol=pool['token0']['symbol'],
@@ -166,4 +174,4 @@ if __name__ == '__main__':
 
     # TODO: !!! GET TOKEN PAIRS FOR EVERY NETWORK SEPARATELY
 
-
+    # TODO: Try to use Quoter v2
