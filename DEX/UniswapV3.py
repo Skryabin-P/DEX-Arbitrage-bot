@@ -2,30 +2,51 @@ import time
 from web3._utils.abi import get_abi_output_types
 from BaseExchange import BaseExchange
 from BaseToken import BaseToken
-from utils import get_contract, exec_time
+from utils import get_contract, exec_time, get_function_abi
 import requests
 
 
 class UniswapV3(BaseExchange):
+    quoter_ver = "v2"  # quoter_ ver - version of Quoter contract. Only "v1" or "v2" can be set
+    abi_folder = "Uniswap-v3"
+    multicall_abi = "Uniswap-v3/Multicall2"
+    graph_endpoint = "https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v3"
+
     def __init__(self, network, fee=None):
         super().__init__(network, fee)
         self._quoter = None
+        self._quoter_abi_suffix = None
+        self._quoter_abi = None
         self._multicall = None
         self._quoter_output_types = None
         self._quoter_calls = None
 
+
+    @property
+    def quoter_abi_suffix(self):
+        if self._quoter_abi_suffix is None:
+            if self.quoter_ver == "v1":
+                self._quoter_abi_suffix = ""
+            elif self.quoter_ver == "v2":
+                self._quoter_abi_suffix = "V2"
+            else:
+                raise ValueError(f'quoter_ver might be Only "v1"'
+                                 f' or "v2", got {self.quoter_ver} instead')
+        return self._quoter_abi_suffix
+
     @property
     def quoter(self):
-        # Quoter contract on Uniswap
+        # Quoter V1 or V2 contract on Uniswap
         if self._quoter is None:
-            self._quoter = get_contract(self.web3_client, abi_name='Uniswap-v3/Quoter')
+            self._quoter = get_contract(self.web3_client,
+                                        abi_name=f'{self.abi_folder}/Quoter{self.quoter_abi_suffix}')
         return self._quoter
 
     @property
     def multicall(self):
         # Multicall2 contract on Uniswap
         if self._multicall is None:
-            self._multicall = get_contract(self.web3_client, abi_name='Uniswap-v3/Multicall2')
+            self._multicall = get_contract(self.web3_client, abi_name=self.multicall_abi)
         return self._multicall
 
     @property
@@ -44,31 +65,57 @@ class UniswapV3(BaseExchange):
         after multicall
         """
         if self._quoter_output_types is None:
-            abi_function = get_function_abi(abi_name='Uniswap-v3/Quoter',
+            abi_function = get_function_abi(abi_name=f'{self.abi_folder}/Quoter{self.quoter_abi_suffix}',
                                             func_name='quoteExactInputSingle')
             self._quoter_output_types = get_abi_output_types(abi_function)
         return self._quoter_output_types
 
     def _encode_sell_price_func(self, base_asset: BaseToken, quote_asset: BaseToken, amount: float = 1):
         """
+        ver - version of Quoter contract. Only "v1" or "v2" can be set
         returns encoded  sell function for pushing to milticall contract
         """
         converted_amount = amount * 10 ** base_asset.decimals
-
-        return self.quoter.encodeABI(fn_name='quoteExactInputSingle',
-                                     args=(base_asset.address,
-                                           quote_asset.address,
-                                           self.fee, converted_amount, 0))
+        if self.quoter_ver == "v1":
+            return self.quoter.encodeABI(fn_name='quoteExactInputSingle',
+                                         args=(base_asset.address,
+                                               quote_asset.address,
+                                               self.fee, converted_amount, 0))
+        elif self.quoter_ver == "v2":
+            struct_params = {
+                "tokenIn": base_asset.address,
+                "tokenOut": quote_asset.address,
+                "amountIn": converted_amount,
+                "fee": self.fee,
+                "sqrtPriceLimitX96": 0
+            }
+            return self.quoter.encodeABI(fn_name='quoteExactInputSingle',
+                                         args=[struct_params])
+        else:
+            raise ValueError(f'quoter_ver might be Only "v1" or "v2", got {self.quoter_ver} instead')
 
     def _encode_buy_price_func(self, base_asset: BaseToken, quote_asset: BaseToken, amount: float = 1):
         """
         returns encoded  buy function for pushing to milticall contract
         """
         converted_amount = amount * 10 ** base_asset.decimals
-        return self.quoter.encodeABI(fn_name='quoteExactOutputSingle',
-                                     args=(quote_asset.address,
-                                           base_asset.address,
-                                           self.fee, converted_amount, 0))
+        if self.quoter_ver == "v1":
+            return self.quoter.encodeABI(fn_name='quoteExactOutputSingle',
+                                         args=(quote_asset.address,
+                                               base_asset.address,
+                                               self.fee, converted_amount, 0))
+        elif self.quoter_ver == "v2":
+            struct_params = {
+                "tokenIn": quote_asset.address,
+                "tokenOut": base_asset.address,
+                "amount": converted_amount,
+                "fee": self.fee,
+                "sqrtPriceLimitX96": 0
+            }
+            return self.quoter.encodeABI(fn_name='quoteExactOutputSingle',
+                                         args=[struct_params])
+        else:
+            raise ValueError(f'quoter_ver might be Only "v1" or "v2", got {self.quoter_ver} instead')
 
     @property
     def quoter_calls(self) -> list[tuple]:
@@ -104,7 +151,7 @@ class UniswapV3(BaseExchange):
                     multicall_raw_data[i + 1][1])[0] / 10 ** quote_asset_decimals
 
             quotes[pair] = {'buy_price': buy_price,
-                            'sell_price': sell_price / 10 ** quote_asset_decimals}
+                            'sell_price': sell_price}
         return quotes
 
     def update_price_book(self, amount):
@@ -123,7 +170,7 @@ class UniswapV3(BaseExchange):
                 " {id " \
                 "token0 {id name symbol decimals }" \
                 "token1 { id name symbol decimals } } }" % (pools_number, self.fee)
-        graph_endpoint = "https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v3"
+        graph_endpoint = self.graph_endpoint
         response = requests.post(graph_endpoint, json={'query': query})
         return response.json()
 
@@ -151,13 +198,20 @@ class UniswapV3(BaseExchange):
 if __name__ == '__main__':
     import os
     from dotenv import load_dotenv
-    from utils import get_function_abi
+
 
     load_dotenv()
     net = os.environ['INFURA_MAINNET']
     t1 = time.perf_counter()
     client = UniswapV3(net, fee=500)
-
+    # params = {
+    #     "tokenIn": client.weth_addr,
+    #     "tokenOut": client.web3_client.to_checksum_address("0xdAC17F958D2ee523a2206206994597C13D831ec7"),
+    #     "amountIn": 10 ** 18,
+    #     "fee": 3000,
+    #     "sqrtPriceLimitX96": 0
+    # }
+    # print(client.quoter2.functions.quoteExactInputSingle(params).call())
     print(client.pair_list)
     client.update_price_book(1)
     print(client.price_book)
@@ -174,4 +228,4 @@ if __name__ == '__main__':
 
     # TODO: !!! GET TOKEN PAIRS FOR EVERY NETWORK SEPARATELY
 
-    # TODO: Try to use Quoter v2
+    # TODO: Try to use Quoter v2 - done!
