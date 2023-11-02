@@ -1,7 +1,7 @@
 from web3 import Web3, AsyncWeb3
 from web3.types import HexStr, ABIFunction
-from utils import get_contract, get_function_abi, encode_function_abi, get_contract_address
-from BaseToken import BaseToken
+from .utils import get_contract, get_function_abi, encode_function_abi, get_contract_address
+from .BaseToken import BaseToken
 import asyncio
 from web3._utils.contracts import encode_abi
 from web3._utils.abi import get_abi_output_types

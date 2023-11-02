@@ -1,4 +1,4 @@
-from UniswapV2 import UniswapV2
+from .UniswapV2 import UniswapV2
 
 
 class PancakeSwapV2(UniswapV2):

@@ -1,4 +1,4 @@
-from UniswapV3 import UniswapV3
+from .UniswapV3 import UniswapV3
 
 
 class SushiSwapV3(UniswapV3):

@@ -1,8 +1,8 @@
 import time
 from web3._utils.abi import get_abi_output_types
-from BaseExchange import BaseExchange
-from BaseToken import BaseToken
-from utils import get_contract, exec_time, get_function_abi
+from .BaseExchange import BaseExchange
+from .BaseToken import BaseToken
+from .utils import get_contract, exec_time, get_function_abi
 import requests
 
 
@@ -10,8 +10,10 @@ class UniswapV2(BaseExchange):
     router_abi = 'Uniswap-v2/Router02'
     graph_endpoint = "https://api.thegraph.com/subgraphs/name/ianlapham/uniswap-v2-dev"
 
-    def __init__(self, network, fee=None):
+    def __init__(self, network, fee=None, num_pairs: int = 10):
         super().__init__(network, fee)
+        self.num_pairs = num_pairs
+        self.name = self.__class__.__name__
         self._router = None
         self._multicall = None
         self._router_calls = None
@@ -83,12 +85,12 @@ class UniswapV2(BaseExchange):
             self._router_output_types = get_abi_output_types(abi_function)
         return self._router_output_types
 
-    def _fetch_top_volume_pairs(self, pools_number: int):
+    def _fetch_top_volume_pairs(self):
 
         query = "{pairs(first: %s, orderBy: reserveUSD  orderDirection: desc)" \
                 " {id " \
                 "token0 {id name symbol decimals }" \
-                "token1 { id name symbol decimals } } }" % pools_number
+                "token1 { id name symbol decimals } } }" % self.num_pairs
         # dev cause it works, official doesn't sync at all
 
         response = requests.post(self.graph_endpoint, json={'query': query})
@@ -117,8 +119,8 @@ class UniswapV2(BaseExchange):
                             'sell_price': sell_price}
         return quotes
 
-    @exec_time
-    def update_price_book(self, amount):
+
+    def update_price_book(self):
 
         print('Update price book')
 
@@ -130,9 +132,9 @@ class UniswapV2(BaseExchange):
     @property
     def pair_list(self):
         if self._pair_list is None:
-            print('Getting pairlist...')
+            print(f"Getting pairlist for {self.name}")
             self._pair_list = {}
-            top_pairs = self._fetch_top_volume_pairs(10)
+            top_pairs = self._fetch_top_volume_pairs()
             for pair in top_pairs['data']['pairs']:
                 pair_name = f"{pair['token0']['symbol']}-{pair['token1']['symbol']}"
                 if pair_name not in self._pair_list.keys():
@@ -156,14 +158,14 @@ if __name__ == '__main__':
     net = os.environ['INFURA_MAINNET']
     client = UniswapV2(net)
 
-    print(client.pair_list)
-    client.update_price_book(1)
-    print(client.price_book)
-    time.sleep(1)
-    client.update_price_book(1)
-    print(client.price_book)
-    client.update_price_book(1)
-    print(client.price_book)
+    print(client.pair_list['not_in_list'])
+    # client.update_price_book(1)
+    # print(client.price_book)
+    # time.sleep(1)
+    # client.update_price_book(1)
+    # print(client.price_book)
+    # client.update_price_book(1)
+    # print(client.price_book)
     # base_asset = BaseToken(name="WETH", address=client.weth_addr, decimals=18)
     # quote_asset = BaseToken(name="USDT", address="0xdAC17F958D2ee523a2206206994597C13D831ec7",
     #                         decimals=6)

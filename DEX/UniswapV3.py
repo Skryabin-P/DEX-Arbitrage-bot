@@ -1,8 +1,8 @@
 import time
 from web3._utils.abi import get_abi_output_types
-from BaseExchange import BaseExchange
-from BaseToken import BaseToken
-from utils import get_contract, exec_time, get_function_abi
+from .BaseExchange import BaseExchange
+from .BaseToken import BaseToken
+from .utils import get_contract, exec_time, get_function_abi
 import requests
 
 
@@ -12,8 +12,10 @@ class UniswapV3(BaseExchange):
     multicall_abi = "Uniswap-v3/Multicall2"
     graph_endpoint = "https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v3"
 
-    def __init__(self, network, fee=None):
+    def __init__(self, network, fee=None, num_pairs: int = 10):
         super().__init__(network, fee)
+        self.num_pairs = num_pairs
+        self.name = self.__class__.__name__
         self._quoter = None
         self._quoter_abi_suffix = None
         self._quoter_abi = None
@@ -131,7 +133,6 @@ class UniswapV3(BaseExchange):
                 self._quoter_calls.append((self.quoter.address, sell_call))
         return self._quoter_calls
 
-    @exec_time
     def decode_multicall_quoter(self, multicall_raw_data):
         quotes = {}
         for i in range(0, len(multicall_raw_data), 2):
@@ -154,7 +155,7 @@ class UniswapV3(BaseExchange):
                             'sell_price': sell_price}
         return quotes
 
-    def update_price_book(self, amount):
+    def update_price_book(self):
 
         print('Update price book')
 
@@ -163,13 +164,13 @@ class UniswapV3(BaseExchange):
 
         self.price_book = self.decode_multicall_quoter(multicall_raw_data)
 
-    def _fetch_top_volume_pools(self, pools_number: int, network=None):
+    def _fetch_top_volume_pools(self, network=None):
 
         query = "{pools(first: %s, orderBy: volumeUSD, " \
                 "orderDirection: desc where: {feeTier:%s})" \
                 " {id " \
                 "token0 {id name symbol decimals }" \
-                "token1 { id name symbol decimals } } }" % (pools_number, self.fee)
+                "token1 { id name symbol decimals } } }" % (self.num_pairs, self.fee)
         graph_endpoint = self.graph_endpoint
         response = requests.post(graph_endpoint, json={'query': query})
         return response.json()
@@ -177,9 +178,9 @@ class UniswapV3(BaseExchange):
     @property
     def pair_list(self):
         if self._pair_list is None:
-            print('Getting pairlist...')
+            print(f"Getting pairlist for {self.name}")
             self._pair_list = {}
-            top_pools = self._fetch_top_volume_pools(3)
+            top_pools = self._fetch_top_volume_pools()
             for pool in top_pools['data']['pools']:
                 pair_name = f"{pool['token0']['symbol']}-{pool['token1']['symbol']}"
                 if pair_name not in self._pair_list.keys():
