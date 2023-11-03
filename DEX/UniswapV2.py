@@ -115,14 +115,15 @@ class UniswapV2(BaseExchange):
                     self.router_output_types,
                     multicall_raw_data[i + 1][1])[0][1] / 10 ** quote_asset_decimals
 
-            quotes[pair] = {'buy_price': buy_price,
-                            'sell_price': sell_price}
+            if sell_price is not None and buy_price is not None:
+                quotes[pair] = {'buy_price': buy_price,
+                                'sell_price': sell_price}
         return quotes
 
 
     def update_price_book(self):
 
-        print('Update price book')
+        #print(f'Update price book for {self.name}')
 
         multicall_raw_data = self.multicall.functions.tryAggregate(
             False, self.router_calls).call()

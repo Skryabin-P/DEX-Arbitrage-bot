@@ -15,10 +15,10 @@ if __name__ == "__main__":
     net = os.environ['INFURA_MAINNET']
     client = SushiSwapV2(net)
     print(client.pair_list)
-    client.update_price_book(1)
+    client.update_price_book()
     print(client.price_book)
     time.sleep(1)
-    client.update_price_book(1)
+    client.update_price_book()
     print(client.price_book)
-    client.update_price_book(1)
+    client.update_price_book()
     print(client.price_book)

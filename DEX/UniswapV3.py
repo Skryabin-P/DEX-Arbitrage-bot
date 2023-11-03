@@ -151,13 +151,14 @@ class UniswapV3(BaseExchange):
                     self.quoter_output_types,
                     multicall_raw_data[i + 1][1])[0] / 10 ** quote_asset_decimals
 
-            quotes[pair] = {'buy_price': buy_price,
-                            'sell_price': sell_price}
+            if sell_price is not None and buy_price is not None:
+                quotes[pair] = {'buy_price': buy_price,
+                                'sell_price': sell_price}
         return quotes
 
     def update_price_book(self):
 
-        print('Update price book')
+        #print(f'Update price book for {self.name}')
 
         multicall_raw_data = self.multicall.functions.tryAggregate(
             False, self.quoter_calls).call()
@@ -214,12 +215,12 @@ if __name__ == '__main__':
     # }
     # print(client.quoter2.functions.quoteExactInputSingle(params).call())
     print(client.pair_list)
-    client.update_price_book(1)
+    client.update_price_book()
     print(client.price_book)
     time.sleep(1)
-    client.update_price_book(1)
+    client.update_price_book()
     print(client.price_book)
-    client.update_price_book(1)
+    client.update_price_book()
     print(client.price_book)
     # TODO: Try to use multicall not async , drop async if multicall is better - DONE
     # TODO: Think about gas fee... seems it can be calculated before transaction sending. QuoterV2 !!!
@@ -230,3 +231,5 @@ if __name__ == '__main__':
     # TODO: !!! GET TOKEN PAIRS FOR EVERY NETWORK SEPARATELY
 
     # TODO: Try to use Quoter v2 - done!
+
+    # TODO: Add other networks contracts addresses, sub-graphs and add options for picking them

@@ -1,6 +1,7 @@
 from threading import Thread
 from DEX.utils import exec_time
 import itertools
+from prettytable import PrettyTable
 
 
 class Scanner:
@@ -17,7 +18,7 @@ class Scanner:
         for thread in threads:
             thread.join()
 
-    @exec_time
+    # @exec_time
     def update_prices(self):
         threads = []
         for exchange in self.exchanges:
@@ -27,12 +28,15 @@ class Scanner:
 
         for thread in threads:
             thread.join()
-        for exchange in self.exchanges:
-            print(exchange.price_book)
+        # for exchange in self.exchanges:
+        #     print(exchange.price_book)
 
     def scan(self):
+        self.get_pairs()
+
         while True:
             self.update_prices()
+            self.arbitrage_spreads = []
             for exchange1, exchange2 in itertools.combinations(self.exchanges, 2):
                 common_pairs = set(exchange1.price_book.keys()).intersection(
                     set(exchange2.price_book.keys()))
@@ -40,14 +44,32 @@ class Scanner:
                     ex1_prices = exchange1.price_book[pair]
                     ex2_prices = exchange2.price_book[pair]
                     profits = self.calculate_pair_profit(ex1_prices, ex2_prices)
-                    print(f"Profit on {pair} from {exchange1.name} to {exchange2.name} is {profits[0]}")
-                    print(f"Profit on {pair} from {exchange2.name} to {exchange1.name} is {profits[1]}")
+                    self.arbitrage_spreads.append([pair, exchange1.name, exchange2.name,
+                                                   ex1_prices['buy_price'], ex2_prices['sell_price'],
+                                                   profits[0]])
+                    self.arbitrage_spreads.append([pair, exchange2.name, exchange1.name,
+                                                   ex2_prices['buy_price'], ex1_prices['sell_price'],
+                                                   profits[1]])
+
+            self.print_arbitrage_table()
+            # print(f"Profit on {pair} from {exchange1.name} to {exchange2.name} is {profits[0]}")
+            # print(f"Profit on {pair} from {exchange2.name} to {exchange1.name} is {profits[1]}")
             time.sleep(3)
 
     def calculate_pair_profit(self, ex1_prices, ex2_prices):
         ex1_to_ex2_profit = (ex2_prices['sell_price'] - ex1_prices['buy_price']) / ex1_prices['buy_price'] * 100
         ex2_to_ex1_profit = (ex1_prices['sell_price'] - ex2_prices['buy_price']) / ex2_prices['buy_price'] * 100
         return ex1_to_ex2_profit, ex2_to_ex1_profit
+
+    def print_arbitrage_table(self):
+        arbitrage_table = PrettyTable()
+        arbitrage_table.field_names = ['Pair', 'Exchange from', "Exchange to",
+                                       "Buy price", "Sell price", "Profit %"]
+        arbitrage_table.sortby = 'Profit %'
+
+        arbitrage_table.add_rows(self.arbitrage_spreads)
+
+        print(arbitrage_table)
 
 
 if __name__ == "__main__":
@@ -65,10 +87,13 @@ if __name__ == "__main__":
     load_dotenv()
     net = os.environ['INFURA_MAINNET']
 
-    uniswap_v3 = UniswapV3(net, 500)
-    uniswap_v2 = UniswapV2(net)
-    sushi3 = SushiSwapV3(net, 500)
-    scanner = Scanner(uniswap_v3, uniswap_v2, sushi3)
+    uniswap_v3 = UniswapV3(net, 500, 50)
+    uniswap_v2 = UniswapV2(net, num_pairs=50)
+    sushi3 = SushiSwapV3(net, 500, 50)
+    sushi2 = SushiSwapV2(net, num_pairs=50)
+    pancakeswap_v2 = PancakeSwapV2(net, num_pairs=50)
+    pancakeswap_v3 = PancakeSwapV3(net, 500, 50)
+    scanner = Scanner(uniswap_v3, uniswap_v2, sushi3, sushi2, pancakeswap_v2, pancakeswap_v3)
 
     scanner.scan()
     # sushi3.update_price_book()
@@ -79,3 +104,5 @@ if __name__ == "__main__":
     # scanner.update_prices()
     # scan = Scanner(uniswap_v3, uniswap_v2)
     # scan.get_pairs()
+
+    # TODO: Think about auto refreshable arbitrage table
