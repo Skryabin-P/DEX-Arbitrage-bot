@@ -1,9 +1,8 @@
-from .UniswapV3 import UniswapV3
+from DEX.UniswapV3 import UniswapV3
 
 
 class PancakeSwapV3(UniswapV3):
     quoter_ver = "v2"
-    graph_endpoint = "https://api.thegraph.com/subgraphs/name/pancakeswap/exchange-v3-eth"
     multicall_abi = "ERC20/multicall"
     abi_folder = "PancakeSwap-v3"
 

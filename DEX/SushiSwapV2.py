@@ -1,10 +1,8 @@
-from .UniswapV2 import UniswapV2
+from DEX.UniswapV2 import UniswapV2
 
 
 class SushiSwapV2(UniswapV2):
     router_abi = "SushiSwap-v2/Router02"
-    graph_endpoint = "https://api.thegraph.com/subgraphs/name/sushiswap/exchange"
-
 
 if __name__ == "__main__":
     import os

@@ -1,28 +1,62 @@
+import json
 from web3 import Web3, AsyncWeb3
-from web3.types import HexStr, ABIFunction
-from .utils import get_contract, get_function_abi, encode_function_abi, get_contract_address
-from .BaseToken import BaseToken
-import asyncio
-from web3._utils.contracts import encode_abi
-from web3._utils.abi import get_abi_output_types
-from dataclasses import dataclass
+from DEX.utils import get_contract
+from DEX.BaseToken import BaseToken
+import os
+
 
 class BaseExchange:
-    def __init__(self, network, fee=None):
+    _available_networks = None
+    multicall_abi = 'ERC20/multicall'
+    factory_abi = ''
+    def __init__(self, network, subnet, api_key, fee=None):
+        self.name = self.__class__.__name__
         self.network = network
-        self.web3_client = Web3(Web3.HTTPProvider(self.network))
-        self.web3_client_async = AsyncWeb3(Web3.AsyncHTTPProvider(self.network))
+        self.api_key = api_key
+        self.subnet = subnet
+        self._web3_provider = None
+        self.web3_client = Web3(Web3.HTTPProvider(self.web3_provider))
+        self.web3_client_async = AsyncWeb3(Web3.AsyncHTTPProvider(self.web3_provider))
         self.fee = fee
         self._price_book = None
         self._pair_list = None
         self._weth_addr = None
+        self._multicall = None
+        self._factory = None
+        self._graph_endpoint = None
+
     @property
     def network(self):
         return self._network
 
     @network.setter
     def network(self, network):
+        if network not in self.available_networks:
+            available_networks = ",".join(self.available_networks)
+            raise ValueError(f"Network must be {available_networks}"
+                             f"\ngot {network} instead")
         self._network = network
+
+    @property
+    def subnet(self):
+        return self._subnet
+
+    @subnet.setter
+    def subnet(self, subnet):
+        available_subnets = ['MAINNET', 'TESTNET']
+        if subnet not in available_subnets:
+            raise ValueError(f"Subnet must be {str(',').join(available_subnets)}"
+                             f" got {subnet} instead")
+        self._subnet = subnet
+
+    @property
+    def web3_provider(self):
+        if self._web3_provider is None:
+            with open(f'{os.path.dirname(os.path.abspath(__file__))}/'
+                      f'resources/web3_provider.json', 'r') as providers:
+                providers = json.load(providers)
+                self._web3_provider = providers[self.network][self.subnet] + self.api_key
+        return self._web3_provider
 
     @property
     def fee(self):
@@ -42,75 +76,59 @@ class BaseExchange:
     @property
     def price_book(self):
         return self._price_book
+
     @price_book.setter
     def price_book(self, price_book: dict):
         if not isinstance(price_book, dict):
             raise ValueError('Price book must be a dictionary!')
         self._price_book = price_book
 
-    def get_token(self, address: str, abi_name='erc20'):
-        """
-        Retrieves info about a ERC20 contract of a given token
-        name, symbol, and decimals.
-        """
-        token_contract = get_contract(self.web3_client, abi_name=abi_name, address=address)
-        name = token_contract.functions.name().call()
-        symbol = token_contract.functions.symbol().call()
-        decimals = token_contract.functions.decimals().call()
-        return BaseToken(name=name, address=address, symbol=symbol, decimals=decimals)
+    @property
+    def graph_endpoint(self):
+        if self._graph_endpoint is None:
+            with open(f'{os.path.dirname(os.path.abspath(__file__))}/'
+                      f'resources/graph_endpoint.json', 'r') as file:
+                self._graph_endpoint = json.load(file)[self.name][self.network]
+        return self._graph_endpoint
 
-    async def get_token_async(self, address: str, abi_name='erc20'):
-        """
-        Retrieves info about a ERC20 contract of a given token
-        name, symbol, and decimals.
-        """
-        token_contract = get_contract(self.web3_client_async, abi_name=abi_name, address=address)
-        task_name = asyncio.create_task(token_contract.functions.name().call())
-        task_symbol = asyncio.create_task(token_contract.functions.symbol().call())
-        task_decimals = asyncio.create_task(token_contract.functions.decimals().call())
-        name = await task_name
-        symbol = await task_symbol
-        decimals = await task_decimals
-        return BaseToken(name=name, address=address, symbol=symbol, decimals=decimals)
+    @property
+    def available_networks(self):
+        if self._available_networks is None:
+            with open(f'{os.path.dirname(os.path.abspath(__file__))}/'
+                      f'resources/graph_endpoint.json', 'r') as file:
+                self._available_networks = json.load(file)[self.name].keys()
+        return self._available_networks
 
-    def get_contract_func(self, abi_name, func_name, contract_address=None):
-        abi_function = get_function_abi(f'ABI/{abi_name}', func_name)
-        function_output_types = get_abi_output_types(abi_function)
-        function_selector = encode_function_abi(abi_function)
-        if contract_address is None:
-            contract_address = get_contract_address(abi_name)
-        contract_address = self.web3_client.to_checksum_address(contract_address)
-        return ContractFunction(abi_function, function_output_types,
-                                function_selector, contract_address)
+    @property
+    def multicall(self):
+        if self._multicall is None:
+            self._multicall = get_contract(self.web3_client, abi_name=self.multicall_abi,
+                                           net=self.network, subnet=self.subnet)
+        return self._multicall
 
+    @property
+    def factory(self):
+        if self._factory is None:
+            self._factory = get_contract(self.web3_client, self.factory_abi,
+                                         self.network, self.subnet)
+        return self._factory
 
-@dataclass
-class ContractFunction:
-    abi_function: ABIFunction
-    output_types: list[str]
-    selector: HexStr
-    address: str
+    def get_token(self, symbol: str):
+
+        with open(f'{os.path.dirname(os.path.abspath(__file__))}/'
+                      f'resources/tokens/{self.network}-{self.subnet.lower()}.json', 'r') as file:
+            tokens = json.load(file)
+            token = list(filter(lambda tokens: tokens['symbol'] == symbol.upper(), tokens))[0]
+        return BaseToken(**token)
+
 
 
 if __name__ == '__main__':
-    import os
     from dotenv import load_dotenv
     import time
-    load_dotenv()
-    exchange_async = BaseExchange(os.environ['INFURA_MAINNET'])
-    t1 = time.perf_counter()
+    from DEX.UniswapV2 import UniswapV2
+    example = UniswapV2('Ethereum', 'MAINNET', 'sdadasd')
 
-    async def main_async():
-        token = await exchange_async.get_token_async('0xdAC17F958D2ee523a2206206994597C13D831ec7')
-        print(token.name)
-    asyncio.run(main_async())
-    t2 = time.perf_counter()
-    print(t2-t1)
+    a = example.get_token('WETH')
+    print(a.name)
 
-    t1 = time.perf_counter()
-    exchange = BaseExchange(os.environ['INFURA_MAINNET'])
-    token = exchange.get_token('0xdAC17F958D2ee523a2206206994597C13D831ec7')
-    print(token.name)
-    t2 = time.perf_counter()
-
-    print(t2-t1)

@@ -9,13 +9,13 @@ import requests
 class UniswapV3(BaseExchange):
     quoter_ver = "v2"  # quoter_ ver - version of Quoter contract. Only "v1" or "v2" can be set
     abi_folder = "Uniswap-v3"
+    factory_abi = "Uniswap-v3/Factory"
     multicall_abi = "Uniswap-v3/Multicall2"
-    graph_endpoint = "https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v3"
+
 
     def __init__(self, network, fee=None, num_pairs: int = 10):
         super().__init__(network, fee)
         self.num_pairs = num_pairs
-        self.name = self.__class__.__name__
         self._quoter = None
         self._quoter_abi_suffix = None
         self._quoter_abi = None
@@ -44,12 +44,7 @@ class UniswapV3(BaseExchange):
                                         abi_name=f'{self.abi_folder}/Quoter{self.quoter_abi_suffix}')
         return self._quoter
 
-    @property
-    def multicall(self):
-        # Multicall2 contract on Uniswap
-        if self._multicall is None:
-            self._multicall = get_contract(self.web3_client, abi_name=self.multicall_abi)
-        return self._multicall
+
 
     @property
     def weth_addr(self):
@@ -150,9 +145,9 @@ class UniswapV3(BaseExchange):
                 sell_price = self.web3_client.codec.decode(
                     self.quoter_output_types,
                     multicall_raw_data[i + 1][1])[0] / 10 ** quote_asset_decimals
-
-            quotes[pair] = {'buy_price': buy_price,
-                            'sell_price': sell_price}
+            if buy_call_success is True and sell_call_success is True:
+                quotes[pair] = {'buy_price': buy_price,
+                                'sell_price': sell_price}
         return quotes
 
     def update_price_book(self):
