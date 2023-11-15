@@ -9,13 +9,13 @@ import requests
 class UniswapV3(BaseExchange):
     quoter_ver = "v2"  # quoter_ ver - version of Quoter contract. Only "v1" or "v2" can be set
     abi_folder = "Uniswap-v3"
+    factory_abi = "Uniswap-v3/Factory"
     multicall_abi = "Uniswap-v3/Multicall2"
-    graph_endpoint = "https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v3"
 
-    def __init__(self, network, fee=None, num_pairs: int = 10):
-        super().__init__(network, fee)
+
+    def __init__(self, network, subnet, api_key, fee=None, num_pairs: int = 10):
+        super().__init__(network,subnet, api_key, fee)
         self.num_pairs = num_pairs
-        self.name = self.__class__.__name__
         self._quoter = None
         self._quoter_abi_suffix = None
         self._quoter_abi = None
@@ -41,15 +41,11 @@ class UniswapV3(BaseExchange):
         # Quoter V1 or V2 contract on Uniswap
         if self._quoter is None:
             self._quoter = get_contract(self.web3_client,
-                                        abi_name=f'{self.abi_folder}/Quoter{self.quoter_abi_suffix}')
+                                        abi_name=f'{self.abi_folder}/Quoter{self.quoter_abi_suffix}',
+                                        net=self.network,subnet=self.subnet)
         return self._quoter
 
-    @property
-    def multicall(self):
-        # Multicall2 contract on Uniswap
-        if self._multicall is None:
-            self._multicall = get_contract(self.web3_client, abi_name=self.multicall_abi)
-        return self._multicall
+
 
     @property
     def weth_addr(self):
@@ -136,24 +132,21 @@ class UniswapV3(BaseExchange):
     def decode_multicall_quoter(self, multicall_raw_data):
         quotes = {}
         for i in range(0, len(multicall_raw_data), 2):
-            buy_price = None
-            sell_price = None
+
             buy_call_success = multicall_raw_data[i][0]
             sell_call_success = multicall_raw_data[i + 1][0]
             pair = list(self.pair_list.keys())[i // 2]  # just pair name
             quote_asset_decimals = self.pair_list[pair]['quote_asset'].decimals
-            if buy_call_success:
+            if buy_call_success and sell_call_success:
                 buy_price = self.web3_client.codec.decode(
                     self.quoter_output_types,
                     multicall_raw_data[i][1])[0] / 10 ** quote_asset_decimals
-            if sell_call_success:
                 sell_price = self.web3_client.codec.decode(
                     self.quoter_output_types,
                     multicall_raw_data[i + 1][1])[0] / 10 ** quote_asset_decimals
-
-            if sell_price is not None and buy_price is not None:
                 quotes[pair] = {'buy_price': buy_price,
                                 'sell_price': sell_price}
+
         return quotes
 
     def update_price_book(self):
@@ -176,25 +169,7 @@ class UniswapV3(BaseExchange):
         response = requests.post(graph_endpoint, json={'query': query})
         return response.json()
 
-    @property
-    def pair_list(self):
-        if self._pair_list is None:
-            print(f"Getting pairlist for {self.name}")
-            self._pair_list = {}
-            top_pools = self._fetch_top_volume_pools()
-            for pool in top_pools['data']['pools']:
-                pair_name = f"{pool['token0']['symbol']}-{pool['token1']['symbol']}"
-                if pair_name not in self._pair_list.keys():
-                    token0 = BaseToken(name=pool['token0']['name'],
-                                       address=pool['token0']['id'],
-                                       symbol=pool['token0']['symbol'],
-                                       decimals=pool['token0']['decimals'])
-                    token1 = BaseToken(name=pool['token1']['name'],
-                                       address=pool['token1']['id'],
-                                       symbol=pool['token1']['symbol'],
-                                       decimals=pool['token1']['decimals'])
-                    self._pair_list[pair_name] = {'base_asset': token0, 'quote_asset': token1}
-        return self._pair_list
+
 
 
 if __name__ == '__main__':

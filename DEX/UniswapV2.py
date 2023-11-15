@@ -1,35 +1,33 @@
 import time
 from web3._utils.abi import get_abi_output_types
-from .BaseExchange import BaseExchange
-from .BaseToken import BaseToken
-from .utils import get_contract, exec_time, get_function_abi
+from DEX.BaseExchange import BaseExchange
+from DEX.BaseToken import BaseToken
+from DEX.utils import get_contract, exec_time, get_function_abi
 import requests
 
 
 class UniswapV2(BaseExchange):
     router_abi = 'Uniswap-v2/Router02'
-    graph_endpoint = "https://api.thegraph.com/subgraphs/name/ianlapham/uniswap-v2-dev"
+    factory_abi = 'Uniswap-v2/Factory'
 
-    def __init__(self, network, fee=None, num_pairs: int = 10):
-        super().__init__(network, fee)
+    def __init__(self, network, subnet, api_key, num_pairs: int = 10):
+        super().__init__(network, subnet, api_key)
         self.num_pairs = num_pairs
-        self.name = self.__class__.__name__
         self._router = None
         self._multicall = None
         self._router_calls = None
         self._router_output_types = None
+        self._graph_endpoint = None
+        self._web3_provider = None
 
     @property
     def router(self):
         if self._router is None:
-            self._router = get_contract(self.web3_client, abi_name=self.router_abi)
+            self._router = get_contract(self.web3_client, abi_name=self.router_abi,
+                                        net=self.network, subnet=self.subnet)
         return self._router
 
-    @property
-    def multicall(self):
-        if self._multicall is None:
-            self._multicall = get_contract(self.web3_client, abi_name='ERC20/multicall')
-        return self._multicall
+
 
     @property
     def weth_addr(self):
@@ -39,7 +37,7 @@ class UniswapV2(BaseExchange):
 
     def _encode_sell_price_func(self, base_asset: BaseToken, quote_asset: BaseToken, amount: float = 1):
         """
-        returns encoded  sell function for pushing to milticall contract
+        returns encoded  sell function for pushing to multicall contract
         """
         converted_amount = amount * 10 ** base_asset.decimals
         route = [base_asset.address, quote_asset.address, ]
@@ -91,7 +89,6 @@ class UniswapV2(BaseExchange):
                 " {id " \
                 "token0 {id name symbol decimals }" \
                 "token1 { id name symbol decimals } } }" % self.num_pairs
-        # dev cause it works, official doesn't sync at all
 
         response = requests.post(self.graph_endpoint, json={'query': query})
         return response.json()
@@ -101,25 +98,20 @@ class UniswapV2(BaseExchange):
         for i in range(0, len(multicall_raw_data), 2):
             pair = list(self.pair_list.keys())[i // 2]  # just pair name
 
-            buy_price = None
-            sell_price = None
-            buy_call_success = multicall_raw_data[i][0]
-            sell_call_success = multicall_raw_data[i+1][0]
-            quote_asset_decimals = self.pair_list[pair]['quote_asset'].decimals
-            if buy_call_success:
-                buy_price = self.web3_client.codec.decode(
-                    self.router_output_types,
-                    multicall_raw_data[i][1])[0][0] / 10 ** quote_asset_decimals
-            if sell_call_success:
-                sell_price = self.web3_client.codec.decode(
-                    self.router_output_types,
-                    multicall_raw_data[i + 1][1])[0][1] / 10 ** quote_asset_decimals
 
-            if sell_price is not None and buy_price is not None:
+            buy_call_success = multicall_raw_data[i][0]
+            sell_call_success = multicall_raw_data[i + 1][0]
+            quote_asset_decimals = self.pair_list[pair]['quote_asset'].decimals
+            if buy_call_success and sell_call_success:
+                buy_price = self.web3_client.codec.decode(
+                        self.router_output_types,
+                        multicall_raw_data[i][1])[0][0] / 10 ** quote_asset_decimals
+                sell_price = self.web3_client.codec.decode(
+                        self.router_output_types,
+                        multicall_raw_data[i + 1][1])[0][1] / 10 ** quote_asset_decimals
                 quotes[pair] = {'buy_price': buy_price,
                                 'sell_price': sell_price}
         return quotes
-
 
     def update_price_book(self):
 
@@ -130,25 +122,11 @@ class UniswapV2(BaseExchange):
 
         self.price_book = self.decode_multicall_router(multicall_raw_data)
 
-    @property
-    def pair_list(self):
-        if self._pair_list is None:
-            print(f"Getting pairlist for {self.name}")
-            self._pair_list = {}
-            top_pairs = self._fetch_top_volume_pairs()
-            for pair in top_pairs['data']['pairs']:
-                pair_name = f"{pair['token0']['symbol']}-{pair['token1']['symbol']}"
-                if pair_name not in self._pair_list.keys():
-                    token0 = BaseToken(name=pair['token0']['name'],
-                                       address=pair['token0']['id'],
-                                       symbol=pair['token0']['symbol'],
-                                       decimals=pair['token0']['decimals'])
-                    token1 = BaseToken(name=pair['token1']['name'],
-                                       address=pair['token1']['id'],
-                                       symbol=pair['token1']['symbol'],
-                                       decimals=pair['token1']['decimals'])
-                    self._pair_list[pair_name] = {'base_asset': token0, 'quote_asset': token1}
-        return self._pair_list
+
+
+    def get_all_pairs_length(self):
+        pass
+
 
 
 if __name__ == '__main__':

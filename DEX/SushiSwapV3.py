@@ -1,10 +1,9 @@
-from .UniswapV3 import UniswapV3
+from DEX.UniswapV3 import UniswapV3
 
 
 class SushiSwapV3(UniswapV3):
     quoter_ver = "v2"
     abi_folder = "SushiSwap-v3"
-    graph_endpoint = "https://api.thegraph.com/subgraphs/name/sushi-v3/v3-ethereum"
     multicall_abi = "ERC20/multicall"
 
 if __name__ == "__main__":

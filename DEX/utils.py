@@ -1,4 +1,6 @@
 import time
+
+import web3
 from web3 import Web3, AsyncWeb3
 import json
 from pathlib import Path
@@ -6,7 +8,6 @@ from web3.types import ABIFunction, Address
 from eth_utils import encode_hex, function_abi_to_4byte_selector
 from functools import wraps
 import os
-
 
 def _get_abi(abi_name: str):
     abi_path = f'{os.path.dirname(os.path.abspath(__file__))}' \
@@ -17,19 +18,21 @@ def _get_abi(abi_name: str):
     return abi
 
 
-def get_contract_address(abi_name: str):
+def get_contract_address(abi_name: str,
+                         net: str, subnet: str):
     contract_name = Path(abi_name).name
     abi_path = Path(abi_name).parent
 
     with open(f'{os.path.dirname(os.path.abspath(__file__))}/'
               f'ABI/{abi_path}/contract_addresses.json', 'r') as file:
-        address = json.load(file)[contract_name]
+        address = json.load(file)[contract_name][net][subnet]
     return address
 
 
-def get_contract(w3: Web3 | AsyncWeb3, abi_name: str, address=None):
+def get_contract(w3: Web3 | AsyncWeb3, abi_name: str,
+                 net: str, subnet: str,  address=None):
     if address is None:
-        address = get_contract_address(abi_name)
+        address = get_contract_address(abi_name, net, subnet)
     abi = _get_abi(abi_name)
     return w3.eth.contract(address, abi=abi)
 
@@ -61,48 +64,23 @@ def exec_time(func):
 
 if __name__ == '__main__':
     from dotenv import load_dotenv
-    import os
-    from BaseToken import BaseToken
-    from UniswapV3 import UniswapV3
+
+    from DEX.UniswapV2 import UniswapV2
 
     # quotes_input_abi = get_function_abi('Uniswap-v3/Quoter', 'quoteExactInputSingle')
     # print(encode_function_abi(quotes_input_abi))
     load_dotenv()
-    INFURA_MAINNET = os.environ['INFURA_MAINNET']
-    # INFURA_API_KEY = os.environ['INFURA_API_KEY']
-    # w3 = Web3(Web3.HTTPProvider(INFURA_MAINNET))
-    # contr = get_contract(w3, abi_name='Uniswap-v3/Quoter')
-    # client = UniswapV3(INFURA_MAINNET)
-    # print(client.weth_addr)
-    # base_asset = BaseToken(name="WETH", address=client.weth_addr, decimals=18)
-    # quote_asset = BaseToken(name="USDT", address="0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9",
-    #                         decimals=6)
-    # a = contr.functions.quoteExactInputSingle(base_asset.address, quote_asset.address, 3000, 1000000000000000, 0).call()
-    # print(a)
-    w3 = Web3(Web3.HTTPProvider(INFURA_MAINNET))
-    usdt_contract = get_contract(w3, abi_name='ERC20/erc20',
-                                 address=w3.to_checksum_address("0xdAC17F958D2ee523a2206206994597C13D831ec7"))
-    weth_contract = get_contract(w3, abi_name='ERC20/erc20',
-                                 address=w3.to_checksum_address("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"))
-
-    amount_usdt3000 = usdt_contract.functions.balanceOf(
-        w3.to_checksum_address("0x4e68Ccd3E89f51C3074ca5072bbAC773960dFa36")).call() / 10 ** 6
-    amount_weth3000 = weth_contract.functions.balanceOf(
-        w3.to_checksum_address("0x4e68Ccd3E89f51C3074ca5072bbAC773960dFa36")).call() / 10 ** 18
-
-    amount_usdt500 = usdt_contract.functions.balanceOf(
-        w3.to_checksum_address("0x11b815efb8f581194ae79006d24e0d814b7697f6")).call() / 10 ** 6
-    amount_weth500 = weth_contract.functions.balanceOf(
-        w3.to_checksum_address("0x11b815efb8f581194ae79006d24e0d814b7697f6")).call() / 10 ** 18
-
-    amount_usdt1000 = usdt_contract.functions.balanceOf(
-        w3.to_checksum_address("0x11b815efb8f581194ae79006d24e0d814b7697f6")).call() / 10 ** 6
-    amount_weth1000 = weth_contract.functions.balanceOf(
-        w3.to_checksum_address("0x11b815efb8f581194ae79006d24e0d814b7697f6")).call() / 10 ** 18
-
-    sum_weth = amount_weth500 + amount_weth3000
-    sum_usdt = amount_usdt500 + amount_usdt3000
-
-    print(sum_usdt / sum_weth)
-    # print(contr.encodeABI(fn_name='quoteExactInputSingle', args=('0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6','0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6',500, 10000,0) ))
-# ValueError: Unknown unit.  Must be one of wei/kwei/babbage/femtoether/mwei/lovelace/picoether/gwei/shannon/nanoether/nano/szabo/microether/micro/finney/milliether/milli/ether/kether/grand/mether/gether/tether
+    INFURA_MAINNET = os.environ['INFURA_API_KEY']
+    client = UniswapV2("Etherium", "MAINNET", INFURA_MAINNET)
+    print(client.factory.functions.allPairsLength().call())
+    # pair_created_event_signature = client.web3_client.keccak(
+    #     text="PairCreated (index_topic_1 address token0, index_topic_2 address token1, address pair, uint256 noname)").hex()
+    # filter_params = {
+    #     'fromBlock': 12000835,
+    #     'toBlock': 'latest',
+    #
+    # }
+    # logs = client.factory.events.PairCreated().get_logs(fromBlock=0xE4E57A, toBlock=0xE9B24F)
+    #
+    # for log in logs:
+    #     print(log)
