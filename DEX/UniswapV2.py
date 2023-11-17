@@ -10,8 +10,8 @@ class UniswapV2(BaseExchange):
     router_abi = 'Uniswap-v2/Router02'
     factory_abi = 'Uniswap-v2/Factory'
 
-    def __init__(self, network, subnet, api_key, num_pairs: int = 10):
-        super().__init__(network, subnet, api_key)
+    def __init__(self, network, subnet, api_key, quote_asset, quote_amount, num_pairs: int = 10):
+        super().__init__(network, subnet, api_key, quote_asset, quote_amount)
         self.num_pairs = num_pairs
         self._router = None
         self._multicall = None
@@ -39,19 +39,19 @@ class UniswapV2(BaseExchange):
         """
         returns encoded  sell function for pushing to multicall contract
         """
-        converted_amount = amount * 10 ** base_asset.decimals
+        converted_amount = amount * 10 ** quote_asset.decimals
         route = [base_asset.address, quote_asset.address, ]
-        return self.router.encodeABI(fn_name='getAmountsOut',
+        return self.router.encodeABI(fn_name='getAmountsIn',
                                      args=(converted_amount, route))
 
     def _encode_buy_price_func(self, base_asset: BaseToken, quote_asset: BaseToken, amount: float = 1):
         """
         returns encoded  buy function for pushing to milticall contract
         """
-        converted_amount = amount * 10 ** base_asset.decimals
+        converted_amount = amount * 10 ** quote_asset.decimals
         route = [quote_asset.address, base_asset.address]
         # print(self.router.functions.getAmountsIn(converted_amount, route).call()[0] / 10 ** quote_asset.decimals)
-        return self.router.encodeABI(fn_name='getAmountsIn',
+        return self.router.encodeABI(fn_name='getAmountsOut',
                                      args=(converted_amount, route))
 
     @property
@@ -84,7 +84,7 @@ class UniswapV2(BaseExchange):
         return self._router_output_types
 
     def _fetch_top_volume_pairs(self):
-
+        # deprecated
         query = "{pairs(first: %s, orderBy: reserveUSD  orderDirection: desc)" \
                 " {id " \
                 "token0 {id name symbol decimals }" \
@@ -98,19 +98,21 @@ class UniswapV2(BaseExchange):
         for i in range(0, len(multicall_raw_data), 2):
             pair = list(self.pair_list.keys())[i // 2]  # just pair name
 
-
             buy_call_success = multicall_raw_data[i][0]
             sell_call_success = multicall_raw_data[i + 1][0]
-            quote_asset_decimals = self.pair_list[pair]['quote_asset'].decimals
+            base_asset_decimals = self.pair_list[pair]['base_asset'].decimals
             if buy_call_success and sell_call_success:
-                buy_price = self.web3_client.codec.decode(
+                buy_amount = self.web3_client.codec.decode(
                         self.router_output_types,
-                        multicall_raw_data[i][1])[0][0] / 10 ** quote_asset_decimals
-                sell_price = self.web3_client.codec.decode(
+                        multicall_raw_data[i][1])[0][1] / 10 ** base_asset_decimals
+                sell_amount = self.web3_client.codec.decode(
                         self.router_output_types,
-                        multicall_raw_data[i + 1][1])[0][1] / 10 ** quote_asset_decimals
-                quotes[pair] = {'buy_price': buy_price,
-                                'sell_price': sell_price}
+                        multicall_raw_data[i + 1][1])[0][0] / 10 ** base_asset_decimals
+                amount = 1
+                buy_price = amount / buy_amount
+                sell_price = amount / sell_amount
+                quotes[pair] = {'buy_price': buy_price, 'buy_amount': buy_amount,
+                                'sell_price': sell_price, 'sell_amount': sell_amount}
         return quotes
 
     def update_price_book(self):
@@ -124,9 +126,6 @@ class UniswapV2(BaseExchange):
 
 
 
-    def get_all_pairs_length(self):
-        pass
-
 
 
 if __name__ == '__main__':
@@ -134,10 +133,21 @@ if __name__ == '__main__':
     from dotenv import load_dotenv
 
     load_dotenv()
-    net = os.environ['INFURA_MAINNET']
-    client = UniswapV2(net)
+    net = "Ethereum"
+    subnet = "MAINNET"
+    api_key = os.environ['INFURA_API_KEY']
+    client = UniswapV2(net, subnet, api_key, 'USDC', 1000.0)
+    client.pair_list = ['WETH-USDC', 'WBTC-Usdc']
+    print(client.pair_list)
+    client.update_price_book()
+    print(client.price_book)
 
-    print(client.pair_list['not_in_list'])
+    # amount_out = 1000 * 10 ** client.pair_list['WETH-USDC']['quote_asset'].decimals
+    # router_out = [client.pair_list['WETH-USDC']['base_asset'].address,
+    #               client.pair_list['WETH-USDC']['quote_asset'].address]
+    # price_2 = client.router.functions.getAmountsIn(amount_out, router_out).call()[0] / 10 ** client.pair_list['WETH-USDC']['base_asset'].decimals
+    # print(1000 / price_1) # was greater
+    # print(1000 /price_2)
     # client.update_price_book(1)
     # print(client.price_book)
     # time.sleep(1)

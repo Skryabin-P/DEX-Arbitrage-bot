@@ -12,9 +12,9 @@ class UniswapV3(BaseExchange):
     factory_abi = "Uniswap-v3/Factory"
     multicall_abi = "Uniswap-v3/Multicall2"
 
-
-    def __init__(self, network, subnet, api_key, fee=None, num_pairs: int = 10):
-        super().__init__(network,subnet, api_key, fee)
+    def __init__(self, network, subnet, api_key, quote_asset,
+                 quote_amount, fee=None, num_pairs: int = 10):
+        super().__init__(network, subnet, api_key, quote_asset, quote_amount, fee)
         self.num_pairs = num_pairs
         self._quoter = None
         self._quoter_abi_suffix = None
@@ -22,7 +22,6 @@ class UniswapV3(BaseExchange):
         self._multicall = None
         self._quoter_output_types = None
         self._quoter_calls = None
-
 
     @property
     def quoter_abi_suffix(self):
@@ -42,10 +41,8 @@ class UniswapV3(BaseExchange):
         if self._quoter is None:
             self._quoter = get_contract(self.web3_client,
                                         abi_name=f'{self.abi_folder}/Quoter{self.quoter_abi_suffix}',
-                                        net=self.network,subnet=self.subnet)
+                                        net=self.network, subnet=self.subnet)
         return self._quoter
-
-
 
     @property
     def weth_addr(self):
@@ -73,7 +70,7 @@ class UniswapV3(BaseExchange):
         ver - version of Quoter contract. Only "v1" or "v2" can be set
         returns encoded  sell function for pushing to milticall contract
         """
-        converted_amount = amount * 10 ** base_asset.decimals
+        converted_amount = amount * 10 ** quote_asset.decimals
         if self.quoter_ver == "v1":
             return self.quoter.encodeABI(fn_name='quoteExactInputSingle',
                                          args=(base_asset.address,
@@ -87,7 +84,7 @@ class UniswapV3(BaseExchange):
                 "fee": self.fee,
                 "sqrtPriceLimitX96": 0
             }
-            return self.quoter.encodeABI(fn_name='quoteExactInputSingle',
+            return self.quoter.encodeABI(fn_name='quoteExactOutputSingle',
                                          args=[struct_params])
         else:
             raise ValueError(f'quoter_ver might be Only "v1" or "v2", got {self.quoter_ver} instead')
@@ -96,7 +93,7 @@ class UniswapV3(BaseExchange):
         """
         returns encoded  buy function for pushing to milticall contract
         """
-        converted_amount = amount * 10 ** base_asset.decimals
+        converted_amount = amount * 10 ** quote_asset.decimals
         if self.quoter_ver == "v1":
             return self.quoter.encodeABI(fn_name='quoteExactOutputSingle',
                                          args=(quote_asset.address,
@@ -110,7 +107,7 @@ class UniswapV3(BaseExchange):
                 "fee": self.fee,
                 "sqrtPriceLimitX96": 0
             }
-            return self.quoter.encodeABI(fn_name='quoteExactOutputSingle',
+            return self.quoter.encodeABI(fn_name='quoteExactInputSingle',
                                          args=[struct_params])
         else:
             raise ValueError(f'quoter_ver might be Only "v1" or "v2", got {self.quoter_ver} instead')
@@ -136,30 +133,33 @@ class UniswapV3(BaseExchange):
             buy_call_success = multicall_raw_data[i][0]
             sell_call_success = multicall_raw_data[i + 1][0]
             pair = list(self.pair_list.keys())[i // 2]  # just pair name
-            quote_asset_decimals = self.pair_list[pair]['quote_asset'].decimals
+            base_asset_decimals = self.pair_list[pair]['base_asset'].decimals
             if buy_call_success and sell_call_success:
-                buy_price = self.web3_client.codec.decode(
+                buy_amount = self.web3_client.codec.decode(
                     self.quoter_output_types,
-                    multicall_raw_data[i][1])[0] / 10 ** quote_asset_decimals
-                sell_price = self.web3_client.codec.decode(
+                    multicall_raw_data[i][1])[0] / 10 ** base_asset_decimals
+                sell_amount = self.web3_client.codec.decode(
                     self.quoter_output_types,
-                    multicall_raw_data[i + 1][1])[0] / 10 ** quote_asset_decimals
-                quotes[pair] = {'buy_price': buy_price,
-                                'sell_price': sell_price}
+                    multicall_raw_data[i + 1][1])[0] / 10 ** base_asset_decimals
+                amount = 1
+                buy_price = amount / buy_amount
+                sell_price = amount / sell_amount
+                quotes[pair] = {'buy_price': buy_price, 'buy_amount': buy_amount,
+                                'sell_price': sell_price, 'sell_amount': sell_amount}
 
         return quotes
 
     def update_price_book(self):
 
-        #print(f'Update price book for {self.name}')
+        # print(f'Update price book for {self.name}')
 
         multicall_raw_data = self.multicall.functions.tryAggregate(
             False, self.quoter_calls).call()
 
         self.price_book = self.decode_multicall_quoter(multicall_raw_data)
 
-    def _fetch_top_volume_pools(self, network=None):
-
+    def _fetch_top_volume_pools(self):
+        # deprecated
         query = "{pools(first: %s, orderBy: volumeUSD, " \
                 "orderDirection: desc where: {feeTier:%s})" \
                 " {id " \
@@ -170,17 +170,17 @@ class UniswapV3(BaseExchange):
         return response.json()
 
 
-
-
 if __name__ == '__main__':
     import os
     from dotenv import load_dotenv
 
-
     load_dotenv()
-    net = os.environ['INFURA_MAINNET']
+    api_key = os.environ['INFURA_API_KEY']
     t1 = time.perf_counter()
-    client = UniswapV3(net, fee=500)
+    client = UniswapV3("Etherium", "MAINNET", api_key, 'USDC', 1000, fee=500)
+    client.pair_list = ['WETH-USDC', 'WBTC-Usdc']
+    client.update_price_book()
+    print(client.price_book)
     # params = {
     #     "tokenIn": client.weth_addr,
     #     "tokenOut": client.web3_client.to_checksum_address("0xdAC17F958D2ee523a2206206994597C13D831ec7"),
@@ -189,14 +189,14 @@ if __name__ == '__main__':
     #     "sqrtPriceLimitX96": 0
     # }
     # print(client.quoter2.functions.quoteExactInputSingle(params).call())
-    print(client.pair_list)
-    client.update_price_book()
-    print(client.price_book)
-    time.sleep(1)
-    client.update_price_book()
-    print(client.price_book)
-    client.update_price_book()
-    print(client.price_book)
+    # print(client.pair_list)
+    # client.update_price_book()
+    # print(client.price_book)
+    # time.sleep(1)
+    # client.update_price_book()
+    # print(client.price_book)
+    # client.update_price_book()
+    # print(client.price_book)
     # TODO: Try to use multicall not async , drop async if multicall is better - DONE
     # TODO: Think about gas fee... seems it can be calculated before transaction sending. QuoterV2 !!!
     #  it returns estimate gas, sqrtprice after and so on

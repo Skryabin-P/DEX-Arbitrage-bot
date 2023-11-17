@@ -9,22 +9,26 @@ class BaseExchange:
     _available_networks = None
     multicall_abi = 'ERC20/multicall'
     factory_abi = ''
+    _quote_asset_prices = None
 
-    def __init__(self, network, subnet, api_key, fee=None):
-        self.name = self.__class__.__name__
-        self.network = network
-        self.api_key = api_key
-        self.subnet = subnet
-        self._web3_provider = None
-        self.web3_client = Web3(Web3.HTTPProvider(self.web3_provider))
-        self.web3_client_async = AsyncWeb3(Web3.AsyncHTTPProvider(self.web3_provider))
-        self.fee = fee
+    def __init__(self, network, subnet, api_key, quote_asset, quote_amount, fee=None):
         self._price_book = None
         self._pair_list = None
         self._weth_addr = None
         self._multicall = None
         self._factory = None
         self._graph_endpoint = None
+        self._web3_provider = None
+
+        self.name = self.__class__.__name__
+        self.network = network
+        self.api_key = api_key
+        self.subnet = subnet
+        self.universal_asset = quote_asset
+        self.universal_amount = quote_amount
+        self.web3_client = Web3(Web3.HTTPProvider(self.web3_provider))
+        self.web3_client_async = AsyncWeb3(Web3.AsyncHTTPProvider(self.web3_provider))
+        self.fee = fee
 
     @property
     def network(self):
@@ -75,6 +79,31 @@ class BaseExchange:
             self._fee = fee
 
     @property
+    def universal_asset(self):
+        # This is an asset which uses
+        # to unify quote volume of another quote assets
+        return self._universal_asset
+
+    @universal_asset.setter
+    def universal_asset(self, asset: str):
+        available_asset = ['USDC', 'USDT', 'WETH', 'DAI']
+        if asset.upper() not in available_asset:
+            raise ValueError(f'quote asset must be', ','.join(available_asset),
+                             f'\n got {asset} instead')
+        self._universal_asset = asset
+
+    @property
+    def universal_amount(self):
+        # Amount of universal token to convert
+        return self._universal_amount
+
+    @universal_amount.setter
+    def universal_amount(self, amount):
+        if not isinstance(amount, float):
+            raise ValueError(f'Quote amount must be a float value, got {amount} instead')
+        self._universal_amount = amount
+
+    @property
     def price_book(self):
         return self._price_book
 
@@ -83,6 +112,18 @@ class BaseExchange:
         if not isinstance(price_book, dict):
             raise ValueError('Price book must be a dictionary!')
         self._price_book = price_book
+
+    @property
+    def quote_asset_prices(self):
+        # if self._quote_asset_prices is None:
+        #     raise ValueError('quote_asset_prices must be set! Use set_quote_asset_prices method')
+        return BaseExchange._quote_asset_prices
+
+    @quote_asset_prices.setter
+    def quote_asset_prices(self, prices: dict):
+        if not isinstance(prices, dict):
+            raise ValueError('quote_asset_prices must be a dictionary!')
+        BaseExchange._quote_asset_prices = prices
 
     @property
     def graph_endpoint(self):
@@ -144,6 +185,8 @@ class BaseExchange:
             token2 = BaseToken(**search_result_symbol2[0])
             self._pair_list[pair] = {'base_asset': token1, 'quote_asset': token2}
 
+    def convert_from_universal_amount(self, currency):
+        pass
 
 
 if __name__ == '__main__':
@@ -163,7 +206,12 @@ if __name__ == '__main__':
     example2 = UniswapV3('Polygon', 'MAINNET', infura_api_key, fee=3000)
     example2.multicall_abi = 'ERC20/multicall'
     example2.pair_list = pairs
-    example2.update_price_book()
-    print(example2.price_book)
 
-
+    example1 = UniswapV2('Ethereum', 'MAINNET', infura_api_key)
+    example2.quote_asset_prices = {"d": 1}
+    print(example1.quote_asset_prices)
+    print(example2.quote_asset_prices)
+    print(example1.quote_asset_prices)
+    # example2.update_price_book()
+    # print(example2.price_book)
+    # TODO: I need some method or converter class to convert universal asset to quote asset
