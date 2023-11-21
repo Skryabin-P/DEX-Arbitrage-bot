@@ -4,17 +4,17 @@ from .BaseExchange import BaseExchange
 from .BaseToken import BaseToken
 from .utils import get_contract, exec_time, get_function_abi
 import requests
+from numbers import Real
 
 
 class UniswapV3(BaseExchange):
-    quoter_ver = "v2"  # quoter_ ver - version of Quoter contract. Only "v1" or "v2" can be set
+    quoter_ver = "v1"  # quoter_ ver - version of Quoter contract. Only "v1" or "v2" can be set
     abi_folder = "Uniswap-v3"
     factory_abi = "Uniswap-v3/Factory"
     multicall_abi = "Uniswap-v3/Multicall2"
 
-    def __init__(self, network, subnet, api_key, quote_asset,
-                 quote_amount, fee=None, num_pairs: int = 10):
-        super().__init__(network, subnet, api_key, quote_asset, quote_amount, fee)
+    def __init__(self, network, subnet, api_key, fee=None, num_pairs: int = 10):
+        super().__init__(network, subnet, api_key, fee)
         self.num_pairs = num_pairs
         self._quoter = None
         self._quoter_abi_suffix = None
@@ -65,21 +65,22 @@ class UniswapV3(BaseExchange):
             self._quoter_output_types = get_abi_output_types(abi_function)
         return self._quoter_output_types
 
-    def _encode_sell_price_func(self, base_asset: BaseToken, quote_asset: BaseToken, amount: float = 1):
+    def _encode_sell_price_func(self, base_asset: BaseToken, quote_asset: BaseToken, amount: Real = 1):
         """
         ver - version of Quoter contract. Only "v1" or "v2" can be set
         returns encoded  sell function for pushing to milticall contract
         """
-        converted_amount = amount * 10 ** quote_asset.decimals
+        converted_amount = int(amount * 10 ** quote_asset.decimals)
         if self.quoter_ver == "v1":
             return self.quoter.encodeABI(fn_name='quoteExactInputSingle',
-                                         args=(base_asset.address,
+                                         args=(
                                                quote_asset.address,
+                                               base_asset.address,
                                                self.fee, converted_amount, 0))
         elif self.quoter_ver == "v2":
             struct_params = {
-                "tokenIn": base_asset.address,
-                "tokenOut": quote_asset.address,
+                "tokenIn": quote_asset.address,
+                "tokenOut": base_asset.address,
                 "amountIn": converted_amount,
                 "fee": self.fee,
                 "sqrtPriceLimitX96": 0
@@ -89,20 +90,20 @@ class UniswapV3(BaseExchange):
         else:
             raise ValueError(f'quoter_ver might be Only "v1" or "v2", got {self.quoter_ver} instead')
 
-    def _encode_buy_price_func(self, base_asset: BaseToken, quote_asset: BaseToken, amount: float = 1):
+    def _encode_buy_price_func(self, base_asset: BaseToken, quote_asset: BaseToken, amount: Real = 1):
         """
         returns encoded  buy function for pushing to milticall contract
         """
-        converted_amount = amount * 10 ** quote_asset.decimals
+        converted_amount = int(amount * 10 ** quote_asset.decimals)
         if self.quoter_ver == "v1":
             return self.quoter.encodeABI(fn_name='quoteExactOutputSingle',
-                                         args=(quote_asset.address,
-                                               base_asset.address,
+                                         args=(base_asset.address,
+                                               quote_asset.address,
                                                self.fee, converted_amount, 0))
         elif self.quoter_ver == "v2":
             struct_params = {
-                "tokenIn": quote_asset.address,
-                "tokenOut": base_asset.address,
+                "tokenIn": base_asset.address,
+                "tokenOut": quote_asset.address,
                 "amount": converted_amount,
                 "fee": self.fee,
                 "sqrtPriceLimitX96": 0
@@ -120,8 +121,11 @@ class UniswapV3(BaseExchange):
             for tokens in self.pair_list.values():
                 base_asset = tokens['base_asset']
                 quote_asset = tokens['quote_asset']
-                buy_call = self._encode_buy_price_func(base_asset, quote_asset, 1)
-                sell_call = self._encode_sell_price_func(base_asset, quote_asset, 1)
+                if quote_asset.symbol == 'WETH':
+                    print(1)
+                amount = self.quote_asset_prices[quote_asset.symbol]
+                buy_call = self._encode_buy_price_func(base_asset, quote_asset, amount)
+                sell_call = self._encode_sell_price_func(base_asset, quote_asset, amount)
                 self._quoter_calls.append((self.quoter.address, buy_call))
                 self._quoter_calls.append((self.quoter.address, sell_call))
         return self._quoter_calls
@@ -134,6 +138,7 @@ class UniswapV3(BaseExchange):
             sell_call_success = multicall_raw_data[i + 1][0]
             pair = list(self.pair_list.keys())[i // 2]  # just pair name
             base_asset_decimals = self.pair_list[pair]['base_asset'].decimals
+            quote_asset_symbol = self.pair_list[pair]['quote_asset'].symbol
             if buy_call_success and sell_call_success:
                 buy_amount = self.web3_client.codec.decode(
                     self.quoter_output_types,
@@ -141,7 +146,7 @@ class UniswapV3(BaseExchange):
                 sell_amount = self.web3_client.codec.decode(
                     self.quoter_output_types,
                     multicall_raw_data[i + 1][1])[0] / 10 ** base_asset_decimals
-                amount = 1
+                amount = self.quote_asset_prices[quote_asset_symbol]
                 buy_price = amount / buy_amount
                 sell_price = amount / sell_amount
                 quotes[pair] = {'buy_price': buy_price, 'buy_amount': buy_amount,

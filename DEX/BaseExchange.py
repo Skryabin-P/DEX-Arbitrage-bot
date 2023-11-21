@@ -11,7 +11,7 @@ class BaseExchange:
     factory_abi = ''
     _quote_asset_prices = None
 
-    def __init__(self, network, subnet, api_key, quote_asset, quote_amount, fee=None):
+    def __init__(self, network, subnet, api_key, fee=None):
         self._price_book = None
         self._pair_list = None
         self._weth_addr = None
@@ -24,8 +24,6 @@ class BaseExchange:
         self.network = network
         self.api_key = api_key
         self.subnet = subnet
-        self.universal_asset = quote_asset
-        self.universal_amount = quote_amount
         self.web3_client = Web3(Web3.HTTPProvider(self.web3_provider))
         self.web3_client_async = AsyncWeb3(Web3.AsyncHTTPProvider(self.web3_provider))
         self.fee = fee
@@ -77,31 +75,6 @@ class BaseExchange:
             if fee < 0:
                 raise ValueError('Fee can not be negative')
             self._fee = fee
-
-    @property
-    def universal_asset(self):
-        # This is an asset which uses
-        # to unify quote volume of another quote assets
-        return self._universal_asset
-
-    @universal_asset.setter
-    def universal_asset(self, asset: str):
-        available_asset = ['USDC', 'USDT', 'WETH', 'DAI']
-        if asset.upper() not in available_asset:
-            raise ValueError(f'quote asset must be', ','.join(available_asset),
-                             f'\n got {asset} instead')
-        self._universal_asset = asset
-
-    @property
-    def universal_amount(self):
-        # Amount of universal token to convert
-        return self._universal_amount
-
-    @universal_amount.setter
-    def universal_amount(self, amount):
-        if not isinstance(amount, float):
-            raise ValueError(f'Quote amount must be a float value, got {amount} instead')
-        self._universal_amount = amount
 
     @property
     def price_book(self):
@@ -194,24 +167,24 @@ if __name__ == '__main__':
     import time
     from DEX.UniswapV2 import UniswapV2
     from DEX.UniswapV3 import UniswapV3
-
+    from DEX.Converter import Converter
     load_dotenv()
-    pairs = ['ETH-usdc', 'aave-eth']
+    pairs = ['WETH-usdc', 'aave-weth']
     infura_api_key = os.environ['INFURA_API_KEY']
-    # example = UniswapV2('Ethereum', 'MAINNET', infura_api_key)
-    # example.pair_list = pairs
-    # print(example.pair_list)
-    # example.update_price_book()
-    # print(example.price_book)
-    example2 = UniswapV3('Polygon', 'MAINNET', infura_api_key, fee=3000)
+    converter = Converter('USDC', 1000)
+    example2 = UniswapV3('Ethereum', 'MAINNET', infura_api_key, fee=3000)
     example2.multicall_abi = 'ERC20/multicall'
     example2.pair_list = pairs
-
     example1 = UniswapV2('Ethereum', 'MAINNET', infura_api_key)
-    example2.quote_asset_prices = {"d": 1}
+    example1.pair_list = pairs
+    example2.quote_asset_prices = converter.convert()
     print(example1.quote_asset_prices)
     print(example2.quote_asset_prices)
     print(example1.quote_asset_prices)
+    example1.update_price_book()
+    example2.update_price_book()
+    print(example1.price_book)
+    print(example2.price_book)
     # example2.update_price_book()
     # print(example2.price_book)
     # TODO: I need some method or converter class to convert universal asset to quote asset

@@ -4,14 +4,15 @@ from DEX.BaseExchange import BaseExchange
 from DEX.BaseToken import BaseToken
 from DEX.utils import get_contract, exec_time, get_function_abi
 import requests
+from numbers import Real
 
 
 class UniswapV2(BaseExchange):
     router_abi = 'Uniswap-v2/Router02'
     factory_abi = 'Uniswap-v2/Factory'
 
-    def __init__(self, network, subnet, api_key, quote_asset, quote_amount, num_pairs: int = 10):
-        super().__init__(network, subnet, api_key, quote_asset, quote_amount)
+    def __init__(self, network, subnet, api_key,  num_pairs: int = 10):
+        super().__init__(network, subnet, api_key)
         self.num_pairs = num_pairs
         self._router = None
         self._multicall = None
@@ -35,20 +36,20 @@ class UniswapV2(BaseExchange):
             self._weth_addr = self.router.functions.WETH().call()
         return self._weth_addr
 
-    def _encode_sell_price_func(self, base_asset: BaseToken, quote_asset: BaseToken, amount: float = 1):
+    def _encode_sell_price_func(self, base_asset: BaseToken, quote_asset: BaseToken, amount: Real = 1):
         """
         returns encoded  sell function for pushing to multicall contract
         """
-        converted_amount = amount * 10 ** quote_asset.decimals
+        converted_amount = int(amount * 10 ** quote_asset.decimals)
         route = [base_asset.address, quote_asset.address, ]
         return self.router.encodeABI(fn_name='getAmountsIn',
                                      args=(converted_amount, route))
 
-    def _encode_buy_price_func(self, base_asset: BaseToken, quote_asset: BaseToken, amount: float = 1):
+    def _encode_buy_price_func(self, base_asset: BaseToken, quote_asset: BaseToken, amount: Real = 1):
         """
         returns encoded  buy function for pushing to milticall contract
         """
-        converted_amount = amount * 10 ** quote_asset.decimals
+        converted_amount = int(amount * 10 ** quote_asset.decimals)
         route = [quote_asset.address, base_asset.address]
         # print(self.router.functions.getAmountsIn(converted_amount, route).call()[0] / 10 ** quote_asset.decimals)
         return self.router.encodeABI(fn_name='getAmountsOut',
