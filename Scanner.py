@@ -2,21 +2,26 @@ from threading import Thread
 from DEX.utils import exec_time
 import itertools
 from prettytable import PrettyTable
+from DEX.Converter import Converter
 
 
 class Scanner:
     def __init__(self, *exchanges):
         self.exchanges = exchanges
+        self.converter = Converter('USDC', 1000)
 
-    def get_pairs(self):
-        threads = []
-        for exchange in self.exchanges:
-            thread = Thread(target=exchange.pair_list)
-            thread.start()
-            threads.append(thread)
+    # def get_pairs(self):
+    #     threads = []
+    #     for exchange in self.exchanges:
+    #         thread = Thread(target=exchange.pair_list)
+    #         thread.start()
+    #         threads.append(thread)
+    #
+    #     for thread in threads:
+    #         thread.join()
 
-        for thread in threads:
-            thread.join()
+    def update_quote_asset_prices(self):
+        self.exchanges[0].quote_asset_prices = self.converter.convert()
 
     # @exec_time
     def update_prices(self):
@@ -32,9 +37,10 @@ class Scanner:
         #     print(exchange.price_book)
 
     def scan(self):
-        self.get_pairs()
+        # self.get_pairs()
 
         while True:
+            self.update_quote_asset_prices()
             self.update_prices()
             self.arbitrage_spreads = []
             for exchange1, exchange2 in itertools.combinations(self.exchanges, 2):
@@ -44,11 +50,15 @@ class Scanner:
                     ex1_prices = exchange1.price_book[pair]
                     ex2_prices = exchange2.price_book[pair]
                     profits = self.calculate_pair_profit(ex1_prices, ex2_prices)
+                    # if profits[0] >=0:
                     self.arbitrage_spreads.append([pair, exchange1.name, exchange2.name,
-                                                   ex1_prices['buy_price'], ex2_prices['sell_price'],
+                                                   ex1_prices['buy_price'], ex1_prices['buy_amount'],
+                                                   ex2_prices['sell_price'], ex2_prices['sell_amount'],
                                                    profits[0]])
+                    # if profits[1] >= 0:
                     self.arbitrage_spreads.append([pair, exchange2.name, exchange1.name,
-                                                   ex2_prices['buy_price'], ex1_prices['sell_price'],
+                                                   ex2_prices['buy_price'], ex2_prices['buy_amount'],
+                                                   ex1_prices['sell_price'], ex1_prices['sell_amount'],
                                                    profits[1]])
 
             self.print_arbitrage_table()
@@ -63,8 +73,8 @@ class Scanner:
 
     def print_arbitrage_table(self):
         arbitrage_table = PrettyTable()
-        arbitrage_table.field_names = ['Pair', 'Exchange from', "Exchange to",
-                                       "Buy price", "Sell price", "Profit %"]
+        arbitrage_table.field_names = ["Pair", "Exchange from", "Exchange to",
+                                       "Buy price", "buy amount", "Sell price", "sell amount", "Profit %"]
         arbitrage_table.sortby = 'Profit %'
 
         arbitrage_table.add_rows(self.arbitrage_spreads)
@@ -85,15 +95,25 @@ if __name__ == "__main__":
     import time
 
     load_dotenv()
-    net = os.environ['INFURA_MAINNET']
+    net = "Ethereum"
+    subnet = "MAINNET"
+    infura_api_key = os.environ['INFURA_API_KEY']
 
-    uniswap_v3 = UniswapV3(net, 500, 50)
-    uniswap_v2 = UniswapV2(net, num_pairs=50)
-    sushi3 = SushiSwapV3(net, 500, 50)
-    sushi2 = SushiSwapV2(net, num_pairs=50)
-    pancakeswap_v2 = PancakeSwapV2(net, num_pairs=50)
-    pancakeswap_v3 = PancakeSwapV3(net, 500, 50)
-    scanner = Scanner(uniswap_v3, uniswap_v2, sushi3, sushi2, pancakeswap_v2, pancakeswap_v3)
+    pairs = ['WETH-usdc', 'AAVE-WETH', 'AAVE-USDC', 'WETH-USDT', 'WETH-DAI', 'WBTC-WETH', 'LINK-WETH', 'LINK-USDC', 'LINK-USDT']
+
+    uniswap_v3 = UniswapV3(net, subnet, infura_api_key, 500)
+    uniswap_v3.pair_list = pairs
+    uniswap_v2 = UniswapV2(net, subnet, infura_api_key)
+    uniswap_v2.pair_list = pairs
+    sushi3 = SushiSwapV3(net, subnet, infura_api_key, 500)
+    sushi3.pair_list = pairs
+    sushi2 = SushiSwapV2(net, subnet, infura_api_key)
+    sushi2.pair_list = pairs
+    pancakeswap_v2 = PancakeSwapV2(net, subnet, infura_api_key)
+    pancakeswap_v2.pair_list = pairs
+    pancakeswap_v3 = PancakeSwapV3(net, subnet, infura_api_key, 500)
+    pancakeswap_v3.pair_list = pairs
+    scanner = Scanner(uniswap_v3,  sushi3, sushi2, pancakeswap_v2, pancakeswap_v3)
 
     scanner.scan()
     # sushi3.update_price_book()

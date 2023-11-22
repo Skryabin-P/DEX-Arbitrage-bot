@@ -63,8 +63,9 @@ class UniswapV2(BaseExchange):
             for tokens in self.pair_list.values():
                 base_asset = tokens['base_asset']
                 quote_asset = tokens['quote_asset']
-                buy_call = self._encode_buy_price_func(base_asset, quote_asset, 1)
-                sell_call = self._encode_sell_price_func(base_asset, quote_asset, 1)
+                quote_currency_amount = self.quote_asset_prices[quote_asset.symbol]
+                buy_call = self._encode_buy_price_func(base_asset, quote_asset, quote_currency_amount)
+                sell_call = self._encode_sell_price_func(base_asset, quote_asset, quote_currency_amount)
                 self._router_calls.append((self.router.address, buy_call))
                 self._router_calls.append((self.router.address, sell_call))
         return self._router_calls
@@ -102,6 +103,7 @@ class UniswapV2(BaseExchange):
             buy_call_success = multicall_raw_data[i][0]
             sell_call_success = multicall_raw_data[i + 1][0]
             base_asset_decimals = self.pair_list[pair]['base_asset'].decimals
+            quote_asset_symbol = self.pair_list[pair]['quote_asset'].symbol
             if buy_call_success and sell_call_success:
                 buy_amount = self.web3_client.codec.decode(
                         self.router_output_types,
@@ -109,9 +111,9 @@ class UniswapV2(BaseExchange):
                 sell_amount = self.web3_client.codec.decode(
                         self.router_output_types,
                         multicall_raw_data[i + 1][1])[0][0] / 10 ** base_asset_decimals
-                amount = 1
-                buy_price = amount / buy_amount
-                sell_price = amount / sell_amount
+                quote_currency_amount = self.quote_asset_prices[quote_asset_symbol]
+                buy_price = quote_currency_amount / buy_amount
+                sell_price = quote_currency_amount / sell_amount
                 quotes[pair] = {'buy_price': buy_price, 'buy_amount': buy_amount,
                                 'sell_price': sell_price, 'sell_amount': sell_amount}
         return quotes
@@ -143,22 +145,4 @@ if __name__ == '__main__':
     client.update_price_book()
     print(client.price_book)
 
-    # amount_out = 1000 * 10 ** client.pair_list['WETH-USDC']['quote_asset'].decimals
-    # router_out = [client.pair_list['WETH-USDC']['base_asset'].address,
-    #               client.pair_list['WETH-USDC']['quote_asset'].address]
-    # price_2 = client.router.functions.getAmountsIn(amount_out, router_out).call()[0] / 10 ** client.pair_list['WETH-USDC']['base_asset'].decimals
-    # print(1000 / price_1) # was greater
-    # print(1000 /price_2)
-    # client.update_price_book(1)
-    # print(client.price_book)
-    # time.sleep(1)
-    # client.update_price_book(1)
-    # print(client.price_book)
-    # client.update_price_book(1)
-    # print(client.price_book)
-    # base_asset = BaseToken(name="WETH", address=client.weth_addr, decimals=18)
-    # quote_asset = BaseToken(name="USDT", address="0xdAC17F958D2ee523a2206206994597C13D831ec7",
-    #                         decimals=6)
-    #
-    # client._encode_sell_price_func(base_asset, quote_asset)
-    # client._encode_buy_price_func(base_asset, quote_asset)
+   
