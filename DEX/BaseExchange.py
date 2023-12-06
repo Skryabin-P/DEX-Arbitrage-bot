@@ -11,7 +11,7 @@ class BaseExchange:
     factory_abi = ''
     _quote_asset_prices = None
 
-    def __init__(self, network, subnet, api_key, fee=None):
+    def __init__(self, network, subnet, api_key=None, web3_provider=None):
         self._price_book = None
         self._pair_list = None
         self._weth_addr = None
@@ -24,9 +24,10 @@ class BaseExchange:
         self.network = network
         self.api_key = api_key
         self.subnet = subnet
-        self.web3_client = Web3(Web3.HTTPProvider(self.web3_provider))
+        self.web3_provider = web3_provider
+        self.web3_client = Web3(Web3.HTTPProvider(self.web3_provider, request_kwargs={'timeout': 600}))
         self.web3_client_async = AsyncWeb3(Web3.AsyncHTTPProvider(self.web3_provider))
-        self.fee = fee
+
 
     @property
     def network(self):
@@ -54,27 +55,19 @@ class BaseExchange:
 
     @property
     def web3_provider(self):
-        if self._web3_provider is None:
+        return self._web3_provider
+
+    @web3_provider.setter
+    def web3_provider(self, provider):
+        if provider is None:
             with open(f'{os.path.dirname(os.path.abspath(__file__))}/'
                       f'resources/web3_provider.json', 'r') as providers:
                 providers = json.load(providers)
                 self._web3_provider = providers[self.network][self.subnet] + self.api_key
-        return self._web3_provider
-
-    @property
-    def fee(self):
-        return self._fee
-
-    @fee.setter
-    def fee(self, fee: int):
-        if fee is None:
-            self._fee = 3000
         else:
-            if not isinstance(fee, int):
-                raise ValueError('Fee must be an integer')
-            if fee < 0:
-                raise ValueError('Fee can not be negative')
-            self._fee = fee
+            self._web3_provider = provider
+
+
 
     @property
     def price_book(self):

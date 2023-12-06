@@ -11,8 +11,8 @@ class UniswapV2(BaseExchange):
     router_abi = 'Uniswap-v2/Router02'
     factory_abi = 'Uniswap-v2/Factory'
 
-    def __init__(self, network, subnet, api_key,  num_pairs: int = 10):
-        super().__init__(network, subnet, api_key)
+    def __init__(self, network, subnet, api_key, web3_provider,  num_pairs: int = 10):
+        super().__init__(network, subnet, api_key, web3_provider)
         self.num_pairs = num_pairs
         self._router = None
         self._multicall = None
@@ -139,10 +139,10 @@ if __name__ == '__main__':
     net = "Ethereum"
     subnet = "MAINNET"
     api_key = os.environ['INFURA_API_KEY']
-    client = UniswapV2(net, subnet, api_key, 'USDC', 1000.0)
+    client = UniswapV2(net, subnet, api_key, 1000.0)
     client.pair_list = ['WETH-USDC', 'WBTC-Usdc']
     print(client.pair_list)
     client.update_price_book()
     print(client.price_book)
 
-   
+

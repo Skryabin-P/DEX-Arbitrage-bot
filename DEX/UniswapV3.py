@@ -13,8 +13,8 @@ class UniswapV3(BaseExchange):
     factory_abi = "Uniswap-v3/Factory"
     multicall_abi = "ERC20/multicall"
 
-    def __init__(self, network, subnet, api_key, fee=None, num_pairs: int = 10):
-        super().__init__(network, subnet, api_key, fee)
+    def __init__(self, network, subnet, api_key, fee=None, web3_provider=None, num_pairs: int = 10):
+        super().__init__(network, subnet, api_key, web3_provider)
         self.num_pairs = num_pairs
         self._quoter = None
         self._quoter_abi_suffix = None
@@ -22,6 +22,21 @@ class UniswapV3(BaseExchange):
         self._multicall = None
         self._quoter_output_types = None
         self._quoter_calls = None
+        self.fee = fee
+    @property
+    def fee(self):
+        return self._fee
+
+    @fee.setter
+    def fee(self, fee: int):
+        if fee is None:
+            self._fee = 3000
+        else:
+            if not isinstance(fee, int):
+                raise ValueError('Fee must be an integer')
+            if fee < 0:
+                raise ValueError('Fee can not be negative')
+            self._fee = fee
 
     @property
     def quoter_abi_suffix(self):

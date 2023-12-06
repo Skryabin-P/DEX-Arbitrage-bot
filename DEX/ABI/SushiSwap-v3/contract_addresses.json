@@ -58,5 +58,35 @@
       "MAINNET": "0xb1E835Dc2785b52265711e17fCCb0fd018226a6e",
       "TESTNET": ""
     }
+  },
+  "SwapRouter": {
+    "Ethereum": {
+      "MAINNET": "0x2E6cd2d30aa43f40aa81619ff4b6E0a41479B13F",
+      "TESTNET": ""
+    },
+    "Arbitrum": {
+      "MAINNET": "0x8A21F6768C1f8075791D08546Dadf6daA0bE820c",
+      "TESTNET": ""
+    },
+    "Avalanche": {
+      "MAINNET": "0x8E4638eefee96732C56291fBF48bBB98725c6b31",
+      "TESTNET": ""
+    },
+    "BSC": {
+      "MAINNET": "0x909662a99605382dB1E8d69cc1f182bb577d9038",
+      "TESTNET": ""
+    },
+    "Linea": {
+      "MAINNET": "0xb1E835Dc2785b52265711e17fCCb0fd018226a6e",
+      "TESTNET": ""
+    },
+    "Optimism": {
+      "MAINNET": "0x8c32Fd078B89Eccb06B40289A539D84A4aA9FDA6",
+      "TESTNET": ""
+    },
+    "Polygon": {
+      "MAINNET": "0x0aF89E1620b96170e2a9D0b68fEebb767eD044c3",
+      "TESTNET": ""
+    }
   }
 }
