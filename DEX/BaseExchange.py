@@ -10,8 +10,9 @@ class BaseExchange:
     multicall_abi = 'ERC20/multicall'
     factory_abi = ''
     _quote_asset_prices = None
+    router_abi = ''
 
-    def __init__(self, network, subnet, api_key=None, web3_provider=None):
+    def __init__(self, network, subnet, api_key=None, web3_provider=None, slippage=None):
         self._price_book = None
         self._pair_list = None
         self._weth_addr = None
@@ -19,6 +20,9 @@ class BaseExchange:
         self._factory = None
         self._graph_endpoint = None
         self._web3_provider = None
+        self._router = None
+        self._arbitrage_contract = None
+        self._slippage = None
 
         self.name = self.__class__.__name__
         self.network = network
@@ -54,6 +58,18 @@ class BaseExchange:
         self._subnet = subnet
 
     @property
+    def slippage(self):
+        return self._slippage
+
+    @slippage.setter
+    def slippage(self, slippage):
+        if not isinstance(slippage, float):
+            raise ValueError("Slippage must be a float")
+        if slippage >= 1:
+            raise ValueError("Slippage must be less than 1")
+        self._slippage = slippage
+
+    @property
     def web3_provider(self):
         return self._web3_provider
 
@@ -66,8 +82,6 @@ class BaseExchange:
                 self._web3_provider = providers[self.network][self.subnet] + self.api_key
         else:
             self._web3_provider = provider
-
-
 
     @property
     def price_book(self):
@@ -115,6 +129,22 @@ class BaseExchange:
         return self._multicall
 
     @property
+    def router(self):
+        if self._router is None:
+            self._router = get_contract(self.web3_client, abi_name=self.router_abi,
+                                        net=self.network, subnet=self.subnet)
+        return self._router
+
+    @property
+    def arbitrage_contract(self):
+        if self._arbitrage_contract is None:
+            self._arbitrage_contract = get_contract(self.web3_client,
+                                                    abi_name='Arbitrage/Arbitrage',
+                                                    net=self.network,
+                                                    subnet=self.subnet)
+        return self._arbitrage_contract
+
+    @property
     def factory(self):
         if self._factory is None:
             self._factory = get_contract(self.web3_client, self.factory_abi,
@@ -151,6 +181,10 @@ class BaseExchange:
             token2 = BaseToken(**search_result_symbol2[0])
             self._pair_list[pair] = {'base_asset': token1, 'quote_asset': token2}
 
+    @staticmethod
+    def _deadline():
+        return time.time() + 10
+
     def convert_from_universal_amount(self, currency):
         pass
 
@@ -165,19 +199,9 @@ if __name__ == '__main__':
     pairs = ['WETH-usdc', 'aave-weth']
     infura_api_key = os.environ['INFURA_API_KEY']
     converter = Converter('USDC', 1000)
-    example2 = UniswapV3('Ethereum', 'MAINNET', infura_api_key, fee=3000)
-    example2.multicall_abi = 'ERC20/multicall'
-    example2.pair_list = pairs
-    example1 = UniswapV2('Ethereum', 'MAINNET', infura_api_key)
-    example1.pair_list = pairs
-    example2.quote_asset_prices = converter.convert()
-    print(example1.quote_asset_prices)
-    print(example2.quote_asset_prices)
-    print(example1.quote_asset_prices)
-    example1.update_price_book()
-    example2.update_price_book()
-    print(example1.price_book)
-    print(example2.price_book)
-    # example2.update_price_book()
-    # print(example2.price_book)
+    exchange = UniswapV2('Ethereum', 'MAINNET', web3_provider='HTTP://127.0.0.1:7545')
+    print(exchange.web3_client.is_connected())
+    usdt = exchange.web3_client.to_checksum_address('0xdAC17F958D2ee523a2206206994597C13D831ec7')
+    print(exchange.arbitrage_contract.functions.getBalance(usdt).call())
+    exchange.arbitrage_contract.functions.requestFlashLoan(usdt).call()
     # TODO: I need some method or converter class to convert universal asset to quote asset

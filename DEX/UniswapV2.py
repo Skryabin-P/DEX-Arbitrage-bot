@@ -11,7 +11,7 @@ class UniswapV2(BaseExchange):
     router_abi = 'Uniswap-v2/Router02'
     factory_abi = 'Uniswap-v2/Factory'
 
-    def __init__(self, network, subnet, api_key, web3_provider,  num_pairs: int = 10):
+    def __init__(self, network, subnet, api_key=None, web3_provider=None,  num_pairs: int = 10):
         super().__init__(network, subnet, api_key, web3_provider)
         self.num_pairs = num_pairs
         self._router = None
@@ -54,6 +54,12 @@ class UniswapV2(BaseExchange):
         # print(self.router.functions.getAmountsIn(converted_amount, route).call()[0] / 10 ** quote_asset.decimals)
         return self.router.encodeABI(fn_name='getAmountsOut',
                                      args=(converted_amount, route))
+
+    def encode_sell_order(self):
+        pass
+
+    def encode_buy_order(self):
+        pass
 
     @property
     def router_calls(self) -> list[tuple]:

@@ -4,7 +4,6 @@ import itertools
 from prettytable import PrettyTable
 from DEX.Converter import Converter
 
-
 class Scanner:
     def __init__(self, *exchanges):
         self.exchanges = exchanges
