@@ -3,6 +3,7 @@ from web3 import Web3, AsyncWeb3
 from DEX.utils import get_contract
 from DEX.BaseToken import BaseToken
 import os
+import time
 
 
 class BaseExchange:
@@ -31,6 +32,7 @@ class BaseExchange:
         self.web3_provider = web3_provider
         self.web3_client = Web3(Web3.HTTPProvider(self.web3_provider, request_kwargs={'timeout': 600}))
         self.web3_client_async = AsyncWeb3(Web3.AsyncHTTPProvider(self.web3_provider))
+        self.slippage = slippage
 
 
     @property
@@ -183,7 +185,7 @@ class BaseExchange:
 
     @staticmethod
     def _deadline():
-        return time.time() + 10
+        return int(time.time()) + 10
 
     def convert_from_universal_amount(self, currency):
         pass

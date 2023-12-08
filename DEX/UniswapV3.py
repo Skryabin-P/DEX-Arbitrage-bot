@@ -7,14 +7,16 @@ import requests
 from numbers import Real
 from eth_utils import to_bytes
 
+
 class UniswapV3(BaseExchange):
     quoter_ver = "v2"  # quoter_ ver - version of Quoter contract. Only "v1" or "v2" can be set
     abi_folder = "Uniswap-v3"
     factory_abi = "Uniswap-v3/Factory"
     multicall_abi = "ERC20/multicall"
+    router_abi = 'Uniswap-v3/SwapRouter02'
 
-    def __init__(self, network, subnet, api_key=None, fee=None, web3_provider=None, num_pairs: int = 10):
-        super().__init__(network, subnet, api_key, web3_provider)
+    def __init__(self, network, subnet, api_key=None, fee=None, web3_provider=None, slippage=None, num_pairs: int = 10):
+        super().__init__(network, subnet, api_key, web3_provider, slippage)
         self.num_pairs = num_pairs
         self._quoter = None
         self._quoter_abi_suffix = None
@@ -23,6 +25,7 @@ class UniswapV3(BaseExchange):
         self._quoter_output_types = None
         self._quoter_calls = None
         self.fee = fee
+
     @property
     def fee(self):
         return self._fee
@@ -128,34 +131,47 @@ class UniswapV3(BaseExchange):
             raise ValueError(f'quoter_ver might be Only "v1" or "v2", got {self.quoter_ver} instead')
 
     def encode_sell_order(self, base_asset: BaseToken, quote_asset: BaseToken, amount_in: Real, amount_out):
-        amount_in_max = (1-self.slippage)*amount_in
+
+        amount_out = int(amount_out * 10 ** quote_asset.decimals)
+        amount_in = int(amount_in * 10 ** base_asset.decimals)
+
+        amount_in_max = int((1 + self.slippage) * amount_in)
         router_struct = {
-                        "tokenIn": base_asset.address,
-                        "tokenOut": quote_asset.address,
-                        "fee": self.fee,
-                        "recipient": self.arbitrage_contract.address,
-                        "deadline": self._deadline(),
-                        "amountOut": amount_out,
-                        "amountInMaximum": amount_in_max,
-                        "sqrtPriceLimitX96": 0,
-                    }
-        return self.router.encodeABI(fn_name='ExactOutputSingle',
-                                     args=[router_struct]), amount_out
+            "tokenIn": base_asset.address,
+            "tokenOut": quote_asset.address,
+            "fee": self.fee,
+            "recipient": self.arbitrage_contract.address,
+            "deadline": self._deadline(),
+            "amountOut": amount_out,
+            "amountInMaximum": amount_in_max,
+            "sqrtPriceLimitX96": 0,
+        }
+
+        struct = (base_asset.address, quote_asset.address, self.fee,
+                  self.arbitrage_contract.address, amount_out, amount_in_max, 0)
+
+        return self.router.encodeABI(fn_name='exactOutputSingle',
+                                     args=[struct]), amount_out
 
     def encode_buy_order(self, base_asset: BaseToken, quote_asset: BaseToken, amount_in: Real, amount_out):
-        amount_out_min = (1-self.slippage)*amount_out
+        amount_in = int(amount_in * 10 ** quote_asset.decimals)
+        amount_out = int(amount_out * 10 ** base_asset.decimals)
+        amount_out_min = int((1 - self.slippage) * amount_out)
         router_struct = {
-                        "tokenIn": base_asset.address,
-                        "tokenOut":  quote_asset.address,
-                        "fee": self.fee,
-                        "recipient": self.arbitrage_contract.address,
-                        "deadline": self._deadline(),
-                        "amountIn": amount_in,
-                        "amountOutMinimum": amount_out_min,
-                        "sqrtPriceLimitX96": 0,
-                    }
-        return self.router.encodeABI(fn_name='ExactInputSingle',
-                                     args=[router_struct]), amount_out_min
+            "tokenIn": quote_asset.address,
+            "tokenOut": base_asset.address,
+            "fee": self.fee,
+            "recipient": self.arbitrage_contract.address,
+            "deadline": self._deadline(),
+            "amountIn": amount_in,
+            "amountOutMinimum": amount_out_min,
+            "sqrtPriceLimitX96": 0
+        }
+        struct = (quote_asset.address, base_asset.address, self.fee,
+                  self.arbitrage_contract.address, self._deadline(), amount_in, amount_out_min, 0)
+
+        return self.router.encodeABI(fn_name='exactInputSingle',
+                                     args=[struct]), amount_out_min
 
     @property
     def quoter_calls(self) -> list[tuple]:
