@@ -11,8 +11,8 @@ class UniswapV2(BaseExchange):
     router_abi = 'Uniswap-v2/Router02'
     factory_abi = 'Uniswap-v2/Factory'
 
-    def __init__(self, network, subnet, api_key=None, web3_provider=None,  num_pairs: int = 10):
-        super().__init__(network, subnet, api_key, web3_provider)
+    def __init__(self, network, subnet, api_key=None, web3_provider=None, slippage=None, num_pairs: int = 10):
+        super().__init__(network, subnet, api_key, web3_provider, slippage)
         self.num_pairs = num_pairs
         self._router = None
         self._multicall = None
@@ -55,11 +55,25 @@ class UniswapV2(BaseExchange):
         return self.router.encodeABI(fn_name='getAmountsOut',
                                      args=(converted_amount, route))
 
-    def encode_sell_order(self):
-        pass
+    def encode_sell_order(self, base_asset: BaseToken, quote_asset: BaseToken, amount_in, amount_out):
+        converted_amount_in = int(amount_in * 10 ** base_asset.decimals)
+        route = [base_asset.address, quote_asset.address]
+        converted_amount_out_min = int(amount_out * 10 ** quote_asset.decimals * (1-self.slippage))
 
-    def encode_buy_order(self):
-        pass
+        return self.router.encodeABI(fn_name="swapExactTokensForTokens",
+                                     args=(converted_amount_in, converted_amount_out_min,
+                                           route, self.arbitrage_contract.address,
+                                           self._deadline())), converted_amount_out_min
+
+    def encode_buy_order(self, base_asset: BaseToken, quote_asset: BaseToken, amount_in, amount_out):
+        converted_amount_in = int(amount_in * 10 ** quote_asset.decimals)
+        route = [quote_asset.address, base_asset.address]
+        converted_amount_out_min = int(amount_out * 10 ** base_asset.decimals * (1-self.slippage))
+
+        return self.router.encodeABI(fn_name="swapExactTokensForTokens",
+                                     args=(converted_amount_in, converted_amount_out_min,
+                                           route, self.arbitrage_contract.address,
+                                           self._deadline())), converted_amount_out_min
 
     @property
     def router_calls(self) -> list[tuple]:

@@ -1,7 +1,7 @@
 {
   "Arbitrage": {
     "Ethereum": {
-      "MAINNET": "0xA88aA79cEd24dA07f84ad9344AC00d574F7DC6dB",
-      "TESTNET": "0xA88aA79cEd24dA07f84ad9344AC00d574F7DC6dB"
+      "MAINNET": "0xa44aD039A5b0ce2106b0c2eb6eee8710c371cfF4",
+      "TESTNET": "0xa44aD039A5b0ce2106b0c2eb6eee8710c371cfF4"
     }
 } }

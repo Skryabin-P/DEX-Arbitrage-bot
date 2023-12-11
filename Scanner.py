@@ -9,15 +9,7 @@ class Scanner:
         self.exchanges = exchanges
         self.converter = Converter('USDC', 1000)
 
-    # def get_pairs(self):
-    #     threads = []
-    #     for exchange in self.exchanges:
-    #         thread = Thread(target=exchange.pair_list)
-    #         thread.start()
-    #         threads.append(thread)
-    #
-    #     for thread in threads:
-    #         thread.join()
+
 
     def update_quote_asset_prices(self):
         self.exchanges[0].quote_asset_prices = self.converter.convert()
@@ -100,7 +92,7 @@ if __name__ == "__main__":
     ganache = "http://127.0.0.1:7545/"
     pairs = ['WETH-usdc', 'AAVE-WETH', 'AAVE-USDC', 'WETH-USDT', 'WETH-DAI', 'WBTC-WETH', 'LINK-WETH', 'LINK-USDC', 'LINK-USDT']
 
-    uniswap_v3 = UniswapV3(net, subnet, infura_api_key, 500, ganache)
+    uniswap_v3 = UniswapV3(net, subnet, infura_api_key, 500, ganache, 0.1)
     uniswap_v3.pair_list = pairs
     uniswap_v2 = UniswapV2(net, subnet, infura_api_key, ganache)
     uniswap_v2.pair_list = pairs
