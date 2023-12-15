@@ -63,7 +63,7 @@ class UniswapV2(BaseExchange):
         return self.router.encodeABI(fn_name="swapExactTokensForTokens",
                                      args=(converted_amount_in, converted_amount_out_min,
                                            route, self.arbitrage_contract.address,
-                                           self._deadline())), converted_amount_out_min
+                                           self._deadline())), converted_amount_out_min / 10**quote_asset.decimals
 
     def encode_buy_order(self, base_asset: BaseToken, quote_asset: BaseToken, amount_in, amount_out):
         converted_amount_in = int(amount_in * 10 ** quote_asset.decimals)
@@ -73,7 +73,7 @@ class UniswapV2(BaseExchange):
         return self.router.encodeABI(fn_name="swapExactTokensForTokens",
                                      args=(converted_amount_in, converted_amount_out_min,
                                            route, self.arbitrage_contract.address,
-                                           self._deadline())), converted_amount_out_min
+                                           self._deadline())), converted_amount_out_min / 10**base_asset.decimals
 
     @property
     def router_calls(self) -> list[tuple]:

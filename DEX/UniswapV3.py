@@ -151,7 +151,7 @@ class UniswapV3(BaseExchange):
                   self.arbitrage_contract.address, amount_out, amount_in_max, 0)
 
         return self.router.encodeABI(fn_name='exactOutputSingle',
-                                     args=[struct]), amount_out
+                                     args=[struct]), amount_out / amount_out ** quote_asset.decimals
 
     def encode_buy_order(self, base_asset: BaseToken, quote_asset: BaseToken, amount_in: Real, amount_out):
         amount_in = int(amount_in * 10 ** quote_asset.decimals)
@@ -168,10 +168,10 @@ class UniswapV3(BaseExchange):
             "sqrtPriceLimitX96": 0
         }
         struct = (quote_asset.address, base_asset.address, self.fee,
-                  self.arbitrage_contract.address, self._deadline(), amount_in, amount_out_min, 0)
+                  self.arbitrage_contract.address, amount_in, amount_out_min, 0)
 
         return self.router.encodeABI(fn_name='exactInputSingle',
-                                     args=[struct]), amount_out_min
+                                     args=[struct]), amount_out_min / 10**base_asset.decimals
 
     @property
     def quoter_calls(self) -> list[tuple]:

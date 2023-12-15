@@ -1,7 +1,11 @@
 {
   "Arbitrage": {
     "Ethereum": {
-      "MAINNET": "0xa44aD039A5b0ce2106b0c2eb6eee8710c371cfF4",
-      "TESTNET": "0xa44aD039A5b0ce2106b0c2eb6eee8710c371cfF4"
+      "MAINNET": "0xf2CAaBdE94550260D7F664fF1bFD3eD826124990",
+      "TESTNET": "0xf2CAaBdE94550260D7F664fF1bFD3eD826124990"
+    },
+    "Polygon": {
+      "MAINNET": "0xC991834517123E26948c6d85Bd4cff76841C89ab",
+      "TESTNET": "0xC991834517123E26948c6d85Bd4cff76841C89ab"
     }
 } }

@@ -5,9 +5,9 @@ from prettytable import PrettyTable
 from DEX.Converter import Converter
 
 class Scanner:
-    def __init__(self, *exchanges):
+    def __init__(self, exchanges, converter):
         self.exchanges = exchanges
-        self.converter = Converter('USDC', 1000)
+        self.converter = converter
 
 
 
@@ -30,32 +30,32 @@ class Scanner:
     def scan(self):
         # self.get_pairs()
 
-        while True:
-            self.update_quote_asset_prices()
-            self.update_prices()
-            self.arbitrage_spreads = []
-            for exchange1, exchange2 in itertools.combinations(self.exchanges, 2):
-                common_pairs = set(exchange1.price_book.keys()).intersection(
-                    set(exchange2.price_book.keys()))
-                for pair in common_pairs:
-                    ex1_prices = exchange1.price_book[pair]
-                    ex2_prices = exchange2.price_book[pair]
-                    profits = self.calculate_pair_profit(ex1_prices, ex2_prices)
-                    # if profits[0] >=0:
-                    self.arbitrage_spreads.append([pair, exchange1.name, exchange2.name,
-                                                   ex1_prices['buy_price'], ex1_prices['buy_amount'],
-                                                   ex2_prices['sell_price'], ex2_prices['sell_amount'],
-                                                   profits[0]])
-                    # if profits[1] >= 0:
-                    self.arbitrage_spreads.append([pair, exchange2.name, exchange1.name,
-                                                   ex2_prices['buy_price'], ex2_prices['buy_amount'],
-                                                   ex1_prices['sell_price'], ex1_prices['sell_amount'],
-                                                   profits[1]])
 
-            self.print_arbitrage_table()
+        self.update_quote_asset_prices()
+        self.update_prices()
+        self.arbitrage_spreads = []
+        for exchange1, exchange2 in itertools.combinations(self.exchanges, 2):
+            common_pairs = set(exchange1.price_book.keys()).intersection(
+                set(exchange2.price_book.keys()))
+            for pair in common_pairs:
+
+                ex1_prices = exchange1.price_book[pair]
+                ex2_prices = exchange2.price_book[pair]
+                profits = self.calculate_pair_profit(ex1_prices, ex2_prices)
+                # if profits[0] >=0:
+                self.arbitrage_spreads.append([pair, exchange1.name, exchange2.name,
+                                               ex1_prices['buy_price'], ex1_prices['buy_amount'],
+                                               ex2_prices['sell_price'], ex2_prices['sell_amount'],
+                                               profits[0]])
+            # if profits[1] >= 0:
+                self.arbitrage_spreads.append([pair, exchange2.name, exchange1.name,
+                                               ex2_prices['buy_price'], ex2_prices['buy_amount'],
+                                               ex1_prices['sell_price'], ex1_prices['sell_amount'],
+                                               profits[1]])
+
+        self.print_arbitrage_table()
             # print(f"Profit on {pair} from {exchange1.name} to {exchange2.name} is {profits[0]}")
             # print(f"Profit on {pair} from {exchange2.name} to {exchange1.name} is {profits[1]}")
-            time.sleep(3)
 
     def calculate_pair_profit(self, ex1_prices, ex2_prices):
         ex1_to_ex2_profit = (ex2_prices['sell_price'] - ex1_prices['buy_price']) / ex1_prices['buy_price'] * 100
@@ -67,9 +67,9 @@ class Scanner:
         arbitrage_table.field_names = ["Pair", "Exchange from", "Exchange to",
                                        "Buy price", "buy amount", "Sell price", "sell amount", "Profit %"]
         arbitrage_table.sortby = 'Profit %'
-
+        arbitrage_table.reversesort = True
         arbitrage_table.add_rows(self.arbitrage_spreads)
-
+        self.arbitrage_data = arbitrage_table.get_json_string()
         print(arbitrage_table)
 
 
