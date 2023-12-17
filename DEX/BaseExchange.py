@@ -183,6 +183,12 @@ class BaseExchange:
             token2 = BaseToken(**search_result_symbol2[0])
             self._pair_list[pair] = {'base_asset': token1, 'quote_asset': token2}
 
+    def encode_router_approve(self, token: BaseToken, amount):
+        converted_amount = int(amount * 10 ** token.decimals)
+        return get_contract(self.web3_client, 'ERC20/erc20', self.network,
+                            self.subnet, token.address).encodeABI(fn_name='approve',
+                                                                args=(self.router.address,
+                                                                      converted_amount))
     @staticmethod
     def _deadline():
         return int(time.time())

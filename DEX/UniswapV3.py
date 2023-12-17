@@ -25,7 +25,7 @@ class UniswapV3(BaseExchange):
         self._quoter_output_types = None
         self._quoter_calls = None
         self.fee = fee
-
+        self.name = self.__class__.__name__ + '_' + str(self.fee)
     @property
     def fee(self):
         return self._fee
@@ -207,7 +207,7 @@ class UniswapV3(BaseExchange):
                     self.quoter_output_types,
                     multicall_raw_data[i + 1][1])[0] / 10 ** base_asset_decimals
                 quote_currency_amount = self.quote_asset_prices[quote_asset_symbol]
-                print(quote_currency_amount)
+
                 buy_price = quote_currency_amount / buy_amount
                 sell_price = quote_currency_amount / sell_amount
                 quotes[pair] = {'buy_price': buy_price, 'buy_amount': buy_amount,

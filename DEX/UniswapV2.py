@@ -56,14 +56,14 @@ class UniswapV2(BaseExchange):
                                      args=(converted_amount, route))
 
     def encode_sell_order(self, base_asset: BaseToken, quote_asset: BaseToken, amount_in, amount_out):
-        converted_amount_in = int(amount_in * 10 ** base_asset.decimals)
+        converted_amount_in_max = int(amount_in * 10 ** base_asset.decimals) * (1+self.slippage)
         route = [base_asset.address, quote_asset.address]
-        converted_amount_out_min = int(amount_out * 10 ** quote_asset.decimals * (1-self.slippage))
+        converted_amount_out= int(amount_out * 10 ** quote_asset.decimals )
 
-        return self.router.encodeABI(fn_name="swapExactTokensForTokens",
-                                     args=(converted_amount_in, converted_amount_out_min,
+        return self.router.encodeABI(fn_name="swapTokensForExactTokens",
+                                     args=(converted_amount_in_max, converted_amount_out,
                                            route, self.arbitrage_contract.address,
-                                           self._deadline())), converted_amount_out_min / 10**quote_asset.decimals
+                                           self._deadline())), converted_amount_out/ 10**quote_asset.decimals
 
     def encode_buy_order(self, base_asset: BaseToken, quote_asset: BaseToken, amount_in, amount_out):
         converted_amount_in = int(amount_in * 10 ** quote_asset.decimals)
