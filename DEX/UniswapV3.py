@@ -25,7 +25,8 @@ class UniswapV3(BaseExchange):
         self._quoter_output_types = None
         self._quoter_calls = None
         self.fee = fee
-        self.name = self.__class__.__name__ + '_' + str(self.fee)
+        self.name = self.__class__.__name__ + '/' + str(self.fee)
+
     @property
     def fee(self):
         return self._fee
