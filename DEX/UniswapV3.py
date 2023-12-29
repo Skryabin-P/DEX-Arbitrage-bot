@@ -118,6 +118,7 @@ class UniswapV3(BaseExchange):
                                          args=(quote_asset.address,
                                                base_asset.address,
                                                self.fee, converted_amount, 0))
+
         elif self.quoter_ver == "v2":
             struct_params = {
                 "tokenIn": quote_asset.address,
@@ -182,7 +183,7 @@ class UniswapV3(BaseExchange):
             for tokens in self.pair_list.values():
                 base_asset = tokens['base_asset']
                 quote_asset = tokens['quote_asset']
-                # if quote_asset.symbol == 'WETH':
+                # if base_asset.symbol == 'SUSHI':
                 #     print(1)
                 quote_currency_amount = self.quote_asset_prices[quote_asset.symbol]
                 buy_call = self._encode_buy_price_func(base_asset, quote_asset, quote_currency_amount)

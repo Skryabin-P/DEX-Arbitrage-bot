@@ -126,23 +126,29 @@ if __name__ == "__main__":
     pair_list = ['WETH-usdc', 'AAVE-WETH', 'AAVE-USDC', 'WETH-USDT', 'WETH-DAI',
                  'WBTC-WETH', 'LINK-WETH', 'LINK-USDC', 'LINK-USDT',
                  'WMATIC-USDC', 'WMATIC-USDT', 'WMATIC-WETH', 'USDC-USDT']
-    uniswap_v3_pools_3000 = ['WMATIC-WETH', 'WBTC-USDC', 'LINK-USDC',
+    uniswap_v3_pools_3000 = ['WMATIC-WETH', 'WBTC-USDC', 'LINK-USDC', 'WBTC-USDC1', 'LINK-USDC1', 'WMATIC-USDC',
+                             'VOXEL-USDC', 'WETH-USDC', 'UNI-USDC',
                              'LINK-WETH', 'WBTC-WETH', 'WMATIC-USDC', 'AAVE-WETH',
-                             'VOXEL-USDC', 'WETH-USDC', 'WETH-USDT', 'UNI-WETH']
+                             'VOXEL-USDC', 'WETH-USDC', 'WETH-USDT', 'UNI-WETH', 'UNI-USDC', 'UNI-USDT',
+                             'SUSHI-WETH', 'LINK-WMATIC']
     uniswap_v3_pools_500 = ['WETH-USDC', 'WBTC-WETH', 'WMATIC-USDC', 'WMATIC-WETH', 'WMATIC-USDC',
-                            'WMATIC-USDT', 'WETH-USDC', 'WBTC-USDC', 'PAR-USDC']
+                            'WMATIC-USDT', 'WETH-USDC', 'WBTC-USDC', 'PAR-USDC',
+                            'WBTC-USDC1', 'LINK-USDC1', 'WMATIC-USDC', 'VOXEL-USDC', 'WETH-USDC', 'UNI-USDC']
 
     sushi3_pools_3000 = ['WETH-USDC', 'WBTC-USDC', 'SUSHI-WETH', 'WETH-USDT', 'MANA-WETH',
                          'WBTC-WETH', 'STG-USDC', 'AVAX-WETH', 'WMATIC-USDC', 'WMATIC-WETH',
                          'WMATIC-USDT', 'AAVE-WETH', 'WMATIC-DAI', 'WETH-DAI', 'BAL-USDC',
-                         'MVI-USDT', 'SUSHI-USDC', 'CRV-WETH']
+                         'MVI-USDT', 'SUSHI-USDC', 'CRV-WETH', 'LINK-WMATIC',
+                         'WBTC-USDC1', 'LINK-USDC1', 'WMATIC-USDC', 'VOXEL-USDC', 'WETH-USDC', 'UNI-USDC']
     sushi3_pools_500 = ['WMATIC-USDC', 'WMATIC-WETH', 'CGG-WETH', 'WETH-USDC', 'WMATIC-USDT',
-                        'WMATIC-DAI', 'WBTC-USDT', 'WETH-DAI']
+                        'WMATIC-DAI', 'WBTC-USDT', 'WETH-DAI',
+                        'WBTC-USDC1', 'LINK-USDC1', 'WMATIC-USDC', 'VOXEL-USDC', 'WETH-USDC', 'UNI-USDC']
 
     sushi2_pairs = ['WMATIC-WETH', 'STG-USDC', 'NCT-USDC', 'KLIMA-USDC', 'WETH-USDC',
                     'WBTC-WETH', 'WETH-DAI', 'AAVE-WETH', 'WMATIC-USDC', 'LINK-WETH', 'WETH-USDT',
                     'AVAX-WETH', 'MANA-WETH', 'CRV-WETH', 'UNI-WETH', 'BAL-WETH',
-                    'SUSHI-WETH', 'AAVE-WETH', 'UNI-USDC', 'UNI-WETH']
+                    'SUSHI-WETH', 'AAVE-WETH', 'UNI-USDC', 'UNI-WETH', 'LINK-WMATIC',
+                    'WBTC-USDC1', 'LINK-USDC1', 'WMATIC-USDC', 'VOXEL-USDC', 'WETH-USDC', 'UNI-USDC']
 
 
     converter = Converter('USDC', 100)

@@ -10,10 +10,11 @@ class Converter:
 
     def __init__(self, quote_asset: str, quote_amount: Real):
         self._symbols = None
-        self.symbols = ['ETHUSDC', 'ETHUSDT', 'ETHDAI', 'USDCUSDT', 'USDTDAI']
+        self.symbols = ['ETHUSDC', 'ETHUSDT', 'ETHDAI', 'USDCUSDT', 'USDTDAI',
+                        'MATICUSDC', 'MATICETH', 'MATICUSDT']
         self.quote_asset = quote_asset
         self.quote_amount = quote_amount
-        self.coin_list = ['ETH', 'USDC', 'DAI', 'USDT']
+        self.coin_list = ['ETH', 'USDC', 'DAI', 'USDT', 'MATIC', 'USDC1']
 
     @property
     def symbols(self):
@@ -68,6 +69,12 @@ class Converter:
 
         # calculate approximate price USDC-DAI from USDT-DAI and USDC-USDT
         prices['USDC-DAI'] = prices['USDT-DAI'] / prices['USDC-USDT']
+        prices['MATIC-DAI'] = prices['MATIC-ETH'] * prices['ETH-DAI']
+        prices['USDC1-USDT'] = prices['USDC-USDT']
+        prices['USDC-USDC1'] = 1
+        prices['ETH-USDC1'] = prices['ETH-USDC']
+        prices['MATIC-USDC1'] = prices['MATIC-USDC']
+        prices['USDC1-DAI'] = prices['USDC-DAI']
         revert_prices = {}
         # calculating revert pairs
         for price_key in prices:
@@ -95,6 +102,7 @@ class Converter:
                 continue
             converted_price = prices[f'{self.quote_asset}-{coin}'] * self.quote_amount
             coin = 'WETH' if coin == 'ETH' else coin
+            coin = 'WMATIC' if coin == 'MATIC' else coin
             converted_amount[coin] = converted_price
 
         return converted_amount
