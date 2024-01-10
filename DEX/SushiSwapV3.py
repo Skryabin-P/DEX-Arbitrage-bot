@@ -5,7 +5,7 @@ class SushiSwapV3(UniswapV3):
     quoter_ver = "v2"
     abi_folder = "SushiSwap-v3"
     multicall_abi = "ERC20/multicall"
-
+    router_abi = 'SushiSwap-v3/SwapRouter'
     def encode_buy_order(self, base_asset: BaseToken, quote_asset: BaseToken, amount_in, amount_out):
         amount_in = int(amount_in * 10 ** quote_asset.decimals)
         amount_out = int(amount_out * 10 ** base_asset.decimals)
@@ -18,7 +18,8 @@ class SushiSwapV3(UniswapV3):
             "deadline": self._deadline(),
             "amountIn": amount_in,
             "amountOutMinimum": amount_out_min,
-            "sqrtPriceLimitX96": 0
+            "sqrtPriceLimitX96": 0,
+
         }
         return self.router.encodeABI(fn_name='exactInputSingle',
                                      args=[router_struct]), amount_out_min / 10 ** base_asset.decimals
@@ -48,14 +49,14 @@ if __name__ == "__main__":
     import time
 
     load_dotenv()
-    net = os.environ['INFURA_MAINNET']
+    api_key = os.environ['INFURA_API_KEY']
 
-    client = SushiSwapV3(net, fee=3000)
-    print(client.pair_list)
-    client.update_price_book(1)
-    print(client.price_book)
-    time.sleep(1)
-    client.update_price_book(1)
-    print(client.price_book)
-    client.update_price_book(1)
-    print(client.price_book)
+    client = SushiSwapV3('Polygon', 'MAINNET', fee=3000, api_key=api_key, slippage=0.001
+                         )
+    client.pair_list = ['WMATIC-WETH']
+    pair = client.pair_list['WMATIC-WETH']
+    encoded = client.encode_buy_order(pair['base_asset'], pair['quote_asset'], 0.004496726383193035,
+                            11.65
+    )
+    print(encoded)
+

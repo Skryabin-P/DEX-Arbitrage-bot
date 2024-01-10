@@ -153,7 +153,7 @@ class UniswapV3(BaseExchange):
                   self.arbitrage_contract.address, amount_out, amount_in_max, 0)
 
         return self.router.encodeABI(fn_name='exactOutputSingle',
-                                     args=[struct]), amount_out / amount_out ** quote_asset.decimals
+                                     args=[struct]), amount_out / 10 ** quote_asset.decimals
 
     def encode_buy_order(self, base_asset: BaseToken, quote_asset: BaseToken, amount_in: Real, amount_out):
         amount_in = int(amount_in * 10 ** quote_asset.decimals)
@@ -178,18 +178,18 @@ class UniswapV3(BaseExchange):
     @property
     def quoter_calls(self) -> list[tuple]:
         # amount means amount of coins
-        if self._quoter_calls is None:
-            self._quoter_calls = []
-            for tokens in self.pair_list.values():
-                base_asset = tokens['base_asset']
-                quote_asset = tokens['quote_asset']
-                # if base_asset.symbol == 'SUSHI':
-                #     print(1)
-                quote_currency_amount = self.quote_asset_prices[quote_asset.symbol]
-                buy_call = self._encode_buy_price_func(base_asset, quote_asset, quote_currency_amount)
-                sell_call = self._encode_sell_price_func(base_asset, quote_asset, quote_currency_amount)
-                self._quoter_calls.append((self.quoter.address, buy_call))
-                self._quoter_calls.append((self.quoter.address, sell_call))
+        #if self._quoter_calls is None:
+        self._quoter_calls = []
+        for tokens in self.pair_list.values():
+            base_asset = tokens['base_asset']
+            quote_asset = tokens['quote_asset']
+            # if base_asset.symbol == 'SUSHI':
+            #     print(1)
+            quote_currency_amount = self.quote_asset_prices[quote_asset.symbol]
+            buy_call = self._encode_buy_price_func(base_asset, quote_asset, quote_currency_amount)
+            sell_call = self._encode_sell_price_func(base_asset, quote_asset, quote_currency_amount)
+            self._quoter_calls.append((self.quoter.address, buy_call))
+            self._quoter_calls.append((self.quoter.address, sell_call))
         return self._quoter_calls
 
     def decode_multicall_quoter(self, multicall_raw_data):

@@ -6,18 +6,18 @@ from DEX.Converter import Converter
 from networkx import DiGraph, simple_cycles
 
 
-class Scanner:
+class AdvancedScanner:
     def __init__(self, exchanges, converter):
         self.exchanges = exchanges
         self.converter = converter
 
     def update_quote_asset_prices(self):
-        self.exchanges[0].quote_asset_prices = self.converter.convert()
+        self.exchanges[list(self.exchanges)[0]].quote_asset_prices = self.converter.convert()
 
     # @exec_time
     def update_prices(self):
         threads = []
-        for exchange in self.exchanges:
+        for exchange in self.exchanges.values():
             thread = Thread(target=exchange.update_price_book())
             thread.start()
             threads.append(thread)
@@ -27,14 +27,10 @@ class Scanner:
         # for exchange in self.exchanges:
         #     print(exchange.price_book)
 
-    def scan(self):
-        # self.get_pairs()
-
-        self.update_quote_asset_prices()
-        self.update_prices()
-        self.arbitrage_spreads = []
+    @exec_time
+    def get_edges(self):
         edges = []
-        for exchange1, exchange2 in itertools.permutations(self.exchanges, 2):
+        for exchange1, exchange2 in itertools.permutations(self.exchanges.values(), 2):
 
             for pricebook1 in exchange1.price_book:
                 base_vertex1 = f'{exchange1.name}_{pricebook1}_buy'
@@ -44,46 +40,62 @@ class Scanner:
                 for pricebook2 in exchange2.price_book:
                     # if pricebook1 == 'WMATIC-WETH' and pricebook2 == 'WMATIC-WETH':
                     #     print()
-                    if pricebook1.split('-')[0] in pricebook2.split('-')[0]:
+                    if pricebook1.split('-')[0] == pricebook2.split('-')[0]:
                         sec_vertex1 = f'{exchange2.name}_{pricebook2}_sell'
-                    elif pricebook1.split('-')[0] in pricebook2.split('-')[1]:
+                    elif pricebook1.split('-')[0] == pricebook2.split('-')[1]:
                         sec_vertex1 = f'{exchange2.name}_{pricebook2}_buy'
 
-                    if pricebook1.split('-')[1] in pricebook2.split('-')[1]:
+                    if pricebook1.split('-')[1] == pricebook2.split('-')[1]:
                         sec_vertex2 = f'{exchange2.name}_{pricebook2}_buy'
 
-                    elif pricebook1.split('-')[1] in pricebook2.split('-')[0]:
+                    elif pricebook1.split('-')[1] == pricebook2.split('-')[0]:
                         sec_vertex2 = f'{exchange2.name}_{pricebook2}_sell'
-                # if sec_vertex1 == 'UniswapV3/3000_SUSHI-WETH_buy' or sec_vertex2 == 'UniswapV3/3000_SUSHI-WETH_buy':
-                #     print(1)
+                    # if sec_vertex1 == 'UniswapV3/3000_SUSHI-WETH_buy' or sec_vertex2 == 'UniswapV3/3000_SUSHI-WETH_buy':
+                    #     print(1)
 
                     if sec_vertex1:
                         edges.append((base_vertex1, sec_vertex1))
                     if sec_vertex2:
                         edges.append((base_vertex2, sec_vertex2))
+        return edges
+    def scan(self):
+        # self.get_pairs()
 
-        my_graph = DiGraph(edges)
+        self.update_quote_asset_prices()
+        self.update_prices()
+        self.arbitrage_spreads = []
+        my_graph = DiGraph(self.get_edges())
 
-        cycles = sorted(filter(lambda x: len(x) > 2, simple_cycles(my_graph, 4)))
+        cycles = sorted(filter(lambda x: len(x) > 1, simple_cycles(my_graph, 4)))
         for cycle in cycles:
-            self.calculate_path_income(cycle)
+            self.arbitrage_spreads.append(self.calculate_path_income(cycle))
+
+        self.print_arbitrage_table()
         # for vertex in edges:
         #     print(vertex)
 
-    def find_exchange(self, name):
-        for exchange in self.exchanges:
-            if exchange.name == name:
-                return exchange
-        return None
+    @exec_time
+    def print_arbitrage_table(self):
+        arbitrage_table = PrettyTable()
+        arbitrage_table.field_names = ['PATH', 'Profit %']
+        arbitrage_table.sortby = 'Profit %'
+        arbitrage_table.max_table_width = 800
+        arbitrage_table.reversesort = True
+
+        for spread in self.arbitrage_spreads:
+            if spread[1] > -0.1:
+                arbitrage_table.add_row([' -> '.join(spread[0].keys()), spread[1]], divider=True)
+
+        print(arbitrage_table)
 
     def calculate_path_income(self, path):
         initial_amount = None
         amount_in = None
-
+        path_preview = {}
         for index, step in enumerate(path):
 
             exchange_name, pair, action = step.split('_')
-            exchange = self.find_exchange(exchange_name)
+            exchange = self.exchanges[exchange_name]
             step_price = exchange.price_book[pair][f'{action}_price']
 
             if action == 'buy':
@@ -96,16 +108,12 @@ class Scanner:
                     amount_in = exchange.price_book[pair][f'{action}_amount']
                     initial_amount = amount_in
                 amount_out = amount_in * step_price
-
+            path_preview[step] = [step_price, amount_in]
             amount_in = amount_out
 
         profit = (amount_out - initial_amount) / initial_amount * 100
-        if profit > -0.2:
-            print(path)
-            print(initial_amount)
-            print(amount_out)
-            print(f'Profit {profit}')
-            print('---------------------------------')
+
+        return path_preview, profit
 
 
 if __name__ == "__main__":
@@ -120,35 +128,37 @@ if __name__ == "__main__":
     from dotenv import load_dotenv
     import time
 
-    converter = Converter('USDC', 10)
+    converter = Converter('USDC', 100)
     load_dotenv()
     net = "Polygon"
     subnet = "MAINNET"
     infura_api_key = os.environ['INFURA_API_KEY']
     ganache = "http://127.0.0.1:7545/"
 
-    uniswap_v3_pools_3000 = ['WMATIC-WETH', 'WBTC-USDC', 'LINK-USDC','WBTC-USDC1', 'LINK-USDC1','WMATIC-USDC', 'VOXEL-USDC', 'WETH-USDC', 'UNI-USDC',
+    uniswap_v3_pools_3000 = ['WMATIC-WETH', 'WBTC-USDC', 'LINK-USDC', 'WBTC-USDC1', 'LINK-USDC1', 'WMATIC-USDC',
+                             'VOXEL-USDC', 'WETH-USDC', 'UNI-USDC',
                              'LINK-WETH', 'WBTC-WETH', 'WMATIC-USDC', 'AAVE-WETH',
                              'VOXEL-USDC', 'WETH-USDC', 'WETH-USDT', 'UNI-WETH', 'UNI-USDC', 'UNI-USDT',
                              'SUSHI-WETH', 'LINK-WMATIC', 'USDC-USDC1']
     uniswap_v3_pools_500 = ['WETH-USDC', 'WBTC-WETH', 'WMATIC-USDC', 'WMATIC-WETH', 'WMATIC-USDC',
                             'WMATIC-USDT', 'WETH-USDC', 'WBTC-USDC', 'PAR-USDC',
-                            'WBTC-USDC1', 'LINK-USDC1','WMATIC-USDC', 'VOXEL-USDC', 'WETH-USDC', 'UNI-USDC', 'USDC-USDC1']
+                            'WBTC-USDC1', 'LINK-USDC1', 'WMATIC-USDC', 'VOXEL-USDC', 'WETH-USDC', 'UNI-USDC',
+                            'USDC-USDC1']
 
     sushi3_pools_3000 = ['WETH-USDC', 'WBTC-USDC', 'SUSHI-WETH', 'WETH-USDT', 'MANA-WETH',
                          'WBTC-WETH', 'STG-USDC', 'AVAX-WETH', 'WMATIC-USDC', 'WMATIC-WETH',
                          'WMATIC-USDT', 'AAVE-WETH', 'WMATIC-DAI', 'WETH-DAI', 'BAL-USDC',
-                         'MVI-USDT', 'SUSHI-USDC', 'CRV-WETH',  'LINK-WMATIC',
-                         'WBTC-USDC1', 'LINK-USDC1','WMATIC-USDC', 'VOXEL-USDC', 'WETH-USDC', 'UNI-USDC', 'USDC-USDC1']
+                         'MVI-USDT', 'SUSHI-USDC', 'CRV-WETH', 'LINK-WMATIC',
+                         'WBTC-USDC1', 'LINK-USDC1', 'WMATIC-USDC', 'VOXEL-USDC', 'WETH-USDC', 'UNI-USDC', 'USDC-USDC1']
     sushi3_pools_500 = ['WMATIC-USDC', 'WMATIC-WETH', 'CGG-WETH', 'WETH-USDC', 'WMATIC-USDT',
                         'WMATIC-DAI', 'WBTC-USDT', 'WETH-DAI',
-                        'WBTC-USDC1', 'LINK-USDC1','WMATIC-USDC', 'VOXEL-USDC', 'WETH-USDC', 'UNI-USDC', 'USDC-USDC1']
+                        'WBTC-USDC1', 'LINK-USDC1', 'WMATIC-USDC', 'VOXEL-USDC', 'WETH-USDC', 'UNI-USDC', 'USDC-USDC1']
 
     sushi2_pairs = ['WMATIC-WETH', 'STG-USDC', 'NCT-USDC', 'KLIMA-USDC', 'WETH-USDC',
                     'WBTC-WETH', 'WETH-DAI', 'AAVE-WETH', 'WMATIC-USDC', 'LINK-WETH', 'WETH-USDT',
                     'AVAX-WETH', 'MANA-WETH', 'CRV-WETH', 'UNI-WETH', 'BAL-WETH',
-                    'SUSHI-WETH', 'AAVE-WETH', 'UNI-USDC', 'UNI-WETH',  'LINK-WMATIC',
-                    'WBTC-USDC1', 'LINK-USDC1','WMATIC-USDC', 'VOXEL-USDC', 'WETH-USDC', 'UNI-USDC', 'USDC-USDC1']
+                    'SUSHI-WETH', 'AAVE-WETH', 'UNI-USDC', 'UNI-WETH', 'LINK-WMATIC',
+                    'WBTC-USDC1', 'LINK-USDC1', 'WMATIC-USDC', 'VOXEL-USDC', 'WETH-USDC', 'UNI-USDC', 'USDC-USDC1']
 
     uniswapV3_3000 = UniswapV3(net, subnet, infura_api_key, 3000, slippage=0.1)
     uniswapV3_3000.pair_list = uniswap_v3_pools_3000
@@ -192,7 +202,7 @@ if __name__ == "__main__":
     #
     # print(uniswapV3_3000.price_book)
 
-    scanner = Scanner([uniswapV3_500, uniswapV3_3000, sushi2, sushi3_500, sushi3_3000],
+    scanner = AdvancedScanner([uniswapV3_500, uniswapV3_3000, sushi2, sushi3_500, sushi3_3000],
                       converter)
 
     scanner.scan()

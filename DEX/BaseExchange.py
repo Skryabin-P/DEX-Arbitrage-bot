@@ -191,7 +191,7 @@ class BaseExchange:
                                                                       converted_amount))
     @staticmethod
     def _deadline():
-        return int(time.time())
+        return int(time.time()) + 60
 
     def convert_from_universal_amount(self, currency):
         pass

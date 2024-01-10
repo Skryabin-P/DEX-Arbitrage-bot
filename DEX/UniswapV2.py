@@ -78,16 +78,16 @@ class UniswapV2(BaseExchange):
     @property
     def router_calls(self) -> list[tuple]:
         # amount means amount of coins
-        if self._router_calls is None:
-            self._router_calls = []
-            for tokens in self.pair_list.values():
-                base_asset = tokens['base_asset']
-                quote_asset = tokens['quote_asset']
-                quote_currency_amount = self.quote_asset_prices[quote_asset.symbol]
-                buy_call = self._encode_buy_price_func(base_asset, quote_asset, quote_currency_amount)
-                sell_call = self._encode_sell_price_func(base_asset, quote_asset, quote_currency_amount)
-                self._router_calls.append((self.router.address, buy_call))
-                self._router_calls.append((self.router.address, sell_call))
+        #if self._router_calls is None:
+        self._router_calls = []
+        for tokens in self.pair_list.values():
+            base_asset = tokens['base_asset']
+            quote_asset = tokens['quote_asset']
+            quote_currency_amount = self.quote_asset_prices[quote_asset.symbol]
+            buy_call = self._encode_buy_price_func(base_asset, quote_asset, quote_currency_amount)
+            sell_call = self._encode_sell_price_func(base_asset, quote_asset, quote_currency_amount)
+            self._router_calls.append((self.router.address, buy_call))
+            self._router_calls.append((self.router.address, sell_call))
         return self._router_calls
 
     @property

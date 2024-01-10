@@ -37,10 +37,13 @@ class Scanner:
         for exchange1, exchange2 in itertools.combinations(self.exchanges, 2):
             common_pairs = set(exchange1.price_book.keys()).intersection(
                 set(exchange2.price_book.keys()))
+            print(f"{exchange1.name}-{exchange1.price_book}")
+            print(f"{exchange2.name}-{exchange2.price_book}")
             for pair in common_pairs:
 
                 ex1_prices = exchange1.price_book[pair]
                 ex2_prices = exchange2.price_book[pair]
+
                 profits = self.calculate_pair_profit(ex1_prices, ex2_prices)
                 # if profits[0] >=0:
                 self.arbitrage_spreads.append([pair, exchange1.name, exchange2.name,

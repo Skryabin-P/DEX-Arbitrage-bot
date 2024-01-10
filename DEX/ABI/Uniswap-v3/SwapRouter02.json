@@ -306,7 +306,7 @@
             "internalType": "address",
             "name": "tokenIn",
             "type": "address"
-          },
+          },  
           {
             "internalType": "address",
             "name": "tokenOut",

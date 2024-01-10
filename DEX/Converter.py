@@ -58,7 +58,7 @@ class Converter:
 
 
     def get_prices(self):
-        url = f'https://api.binance.com/api/v3/' \
+        url = f'https://api-gcp.binance.com/api/v3/' \
               f'ticker/price'
         params = {"symbols": f'[{self.symbols}]'}
         raw_response = requests.get(url, params=params).json()
@@ -68,6 +68,7 @@ class Converter:
                 symbol['symbol'])] = float(symbol['price'])
 
         # calculate approximate price USDC-DAI from USDT-DAI and USDC-USDT
+        self.matic_price = prices['MATIC-USDC']
         prices['USDC-DAI'] = prices['USDT-DAI'] / prices['USDC-USDT']
         prices['MATIC-DAI'] = prices['MATIC-ETH'] * prices['ETH-DAI']
         prices['USDC1-USDT'] = prices['USDC-USDT']
