@@ -3,8 +3,8 @@ from DEX.UniswapV3 import UniswapV3
 
 class PancakeSwapV3(UniswapV3):
     quoter_ver = "v2"
-    multicall_abi = "ERC20/multicall"
-    abi_folder = "PancakeSwap-v3"
+    multicall_abi = "General/multicall"
+    abi_folder = "PancakeSwapV3"
 
 
 if __name__ == "__main__":

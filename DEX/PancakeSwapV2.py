@@ -2,7 +2,7 @@ from DEX.UniswapV2 import UniswapV2
 
 
 class PancakeSwapV2(UniswapV2):
-    router_abi = "PancakeSwap-v2/Router02"
+    router_abi = "PancakeSwapV2/Router02"
 
 
 if __name__ == "__main__":

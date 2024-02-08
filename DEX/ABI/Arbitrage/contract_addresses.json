@@ -1,10 +1,10 @@
 {
   "Arbitrage": {
-    "Ethereum": {
+    "ETHEREUM": {
       "MAINNET": "0xf2CAaBdE94550260D7F664fF1bFD3eD826124990",
       "TESTNET": "0xf2CAaBdE94550260D7F664fF1bFD3eD826124990"
     },
-    "Polygon": {
+    "POLYGON": {
       "MAINNET": "0xC991834517123E26948c6d85Bd4cff76841C89ab",
       "TESTNET": "0xC991834517123E26948c6d85Bd4cff76841C89ab"
     }

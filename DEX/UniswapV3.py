@@ -10,13 +10,13 @@ from eth_utils import to_bytes
 
 class UniswapV3(BaseExchange):
     quoter_ver = "v2"  # quoter_ ver - version of Quoter contract. Only "v1" or "v2" can be set
-    abi_folder = "Uniswap-v3"
-    factory_abi = "Uniswap-v3/Factory"
-    multicall_abi = "ERC20/multicall"
-    router_abi = 'Uniswap-v3/SwapRouter02'
+    abi_folder = "UniswapV3"
+    factory_abi = "UniswapV3/Factory"
+    multicall_abi = "General/multicall"
+    router_abi = 'UniswapV3/SwapRouter02'
 
-    def __init__(self, network, subnet, api_key=None, fee=None, web3_provider=None, slippage=None, num_pairs: int = 10):
-        super().__init__(network, subnet, api_key, web3_provider, slippage)
+    def __init__(self, network, subnet, fee=None, web3_provider=None, slippage=None, num_pairs: int = 10):
+        super().__init__(network, subnet, web3_provider, slippage)
         self.num_pairs = num_pairs
         self._quoter = None
         self._quoter_abi_suffix = None

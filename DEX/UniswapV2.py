@@ -8,8 +8,8 @@ from numbers import Real
 
 
 class UniswapV2(BaseExchange):
-    router_abi = 'Uniswap-v2/Router02'
-    factory_abi = 'Uniswap-v2/Factory'
+    router_abi = 'UniswapV2/Router02'
+    factory_abi = 'UniswapV2/Factory'
 
     def __init__(self, network, subnet, api_key=None, web3_provider=None, slippage=None, num_pairs: int = 10):
         super().__init__(network, subnet, api_key, web3_provider, slippage)

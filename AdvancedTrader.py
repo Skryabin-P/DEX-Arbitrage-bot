@@ -184,7 +184,7 @@ if __name__ == "__main__":
 
     uniswap_v3_pools_100 = ['USDC-USDC1', 'USDC1-USDT', 'USDC1-DAI', 'USDC-USDT']
     sushiswap_v3_pools_100 = ['USDC-USDC1', 'USDC1-USDT', 'USDC1-DAI', 'USDC-USDT']
-    converter = Converter('USDC', 100)
+    converter = Converter('USDC', 10)
     slippage = 0.001
     uniswap_v3_100 = UniswapV3(network, subnet, api_key, 100, slippage=slippage)
     uniswap_v3_100.pair_list = uniswap_v3_pools_100
@@ -214,6 +214,6 @@ if __name__ == "__main__":
 
     # TODO: put pools with different comissions in one object, change exactInputSingle for exactOutputSingle, add more exchanges
     # print(get_contract(sushi3_100.web3_client,
-    #                    abi_name="Uniswap-v3/Pool",
+    #                    abi_name="UniswapV3/Pool",
     #                    address="0x0e44cEb592AcFC5D3F09D996302eB4C499ff8c10",
     #                    net="Polygon", subnet="MAINNET").functions.slot0().call())

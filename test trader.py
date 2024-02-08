@@ -31,7 +31,7 @@ price_link_weth = uniswap_v3.price_book['LINK-WETH']
 weth_usdc = uniswap_v3.pair_list['WETH-USDT']
 usdt_address = uniswap_v3.pair_list['WETH-USDT']['quote_asset'].address
 function_signature = 'approve(address,uint256)'
-usdt_approve = get_contract(uniswap_v3.web3_client, 'ERC20/erc20', 'Ethereum',
+usdt_approve = get_contract(uniswap_v3.web3_client, 'General/erc20', 'Ethereum',
                             'MAINNET', weth_usdc['quote_asset'].address).encodeABI(fn_name='approve',
                                                                                    args=(uniswap_v3.router.address,
                                                                                          1000 * 10**6 * 10))
@@ -49,7 +49,7 @@ buy_weth_encoded, weth_amount = uniswap_v3.encode_buy_order(weth_usdc['base_asse
 
 link_weth = uniswap_v3.pair_list['LINK-WETH']
 
-weth_approve = get_contract(uniswap_v3.web3_client, 'ERC20/erc20', 'Ethereum',
+weth_approve = get_contract(uniswap_v3.web3_client, 'General/erc20', 'Ethereum',
                             'MAINNET', link_weth['quote_asset'].address).encodeABI(fn_name='approve',
                                                                                    args=(uniswap_v3.router.address,
                                                                                          int(weth_amount*10**18)))
@@ -60,7 +60,7 @@ buy_link_encoded, link_amount = uniswap_v3.encode_buy_order(link_weth['base_asse
 
 # link_usdt_price = uniswap_v3.price_book['LINK-USDT']
 
-link_approve = get_contract(uniswap_v3.web3_client, 'ERC20/erc20', 'Ethereum',
+link_approve = get_contract(uniswap_v3.web3_client, 'General/erc20', 'Ethereum',
                             'MAINNET', link_weth['base_asset'].address).encodeABI(fn_name='approve',
                                                                                   args=(uniswap_v3.router.address,
                                                                                         int(link_amount*10**link_weth['base_asset'].decimals)))

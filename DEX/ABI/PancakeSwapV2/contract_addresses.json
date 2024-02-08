@@ -1,14 +1,14 @@
 {
   "Router02": {
-    "Ethereum": {
+    "ETHEREUM": {
       "MAINNET": "0xEfF92A263d31888d860bD50809A8D171709b7b1c",
       "TESTNET": "0xEfF92A263d31888d860bD50809A8D171709b7b1c"
     },
-    "Arbitrum": {
+    "ARBITRUM": {
       "MAINNET": "0x8cFe327CEc66d1C090Dd72bd0FF11d690C33a2Eb",
       "TESTNET": ""
     },
-    "Linea": {
+    "LINEA": {
       "MAINNET": "0x8cFe327CEc66d1C090Dd72bd0FF11d690C33a2Eb",
       "TESTNET": ""
     },
@@ -18,15 +18,15 @@
     }
   },
   "Factory": {
-    "Ethereum": {
+    "ETHEREUM": {
       "MAINNET": "0x1097053Fd2ea711dad45caCcc45EfF7548fCB362",
       "TESTNET": "0x1097053Fd2ea711dad45caCcc45EfF7548fCB362"
     },
-    "Arbitrum": {
+    "ARBITRUM": {
       "MAINNET": "0x02a84c1b3BBD7401a5f7fa98a384EBC70bB5749E",
       "TESTNET": ""
     },
-    "Linea": {
+    "LINEA": {
       "MAINNET": "0x02a84c1b3BBD7401a5f7fa98a384EBC70bB5749E",
       "TESTNET": ""
     },

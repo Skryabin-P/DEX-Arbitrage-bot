@@ -22,17 +22,37 @@ def get_contract_address(abi_name: str,
                          net: str, subnet: str):
     contract_name = Path(abi_name).name
     abi_path = Path(abi_name).parent
+    contract_addresses_directory = f'{os.path.dirname(os.path.abspath(__file__))}/' \
+                                   f'ABI/{abi_path}/contract_addresses.json'
+    with open(contract_addresses_directory, 'r') as file:
+        contract_addresses = json.load(file)
+        if contract_name not in contract_addresses.keys():
+            raise ValueError(f"{contract_name} not found in {contract_addresses_directory}\n"
+                             f"Try to add manually or provide a contract address")
+        net = net.upper()
+        if net not in contract_addresses[contract_name].keys():
+            raise ValueError(f"Network `{net}` not added yet for a contract {contract_name}\n"
+                             f"Try to add manually to {contract_addresses_directory}"
+                             f"\nor provide a contract address")
 
-    with open(f'{os.path.dirname(os.path.abspath(__file__))}/'
-              f'ABI/{abi_path}/contract_addresses.json', 'r') as file:
-        address = json.load(file)[contract_name][net][subnet]
+        subnet = subnet.upper()
+        if subnet not in contract_addresses[contract_name][net].keys():
+            raise ValueError(f"Subnet `{subnet}` not added yet for `{net}` network for a contract {contract_name}\n"
+                             f"Try to add manually to {contract_addresses_directory}"
+                             f"\nor provide a contract address")
+
+        address = contract_addresses[contract_name][net][subnet]
     return address
 
 
 def get_contract(w3: Web3 | AsyncWeb3, abi_name: str,
-                 net: str, subnet: str,  address=None):
+                 net: str = None, subnet: str = None,  address=None):
     if address is None:
         address = get_contract_address(abi_name, net, subnet)
+    if not w3.is_address(address):
+        raise ValueError(f"contract address must be hexadecimal and starts with 0x,"
+                         f"\ngot `{address}` instead")
+    address = w3.to_checksum_address(address)
     abi = _get_abi(abi_name)
     return w3.eth.contract(address, abi=abi)
 
@@ -67,13 +87,14 @@ if __name__ == '__main__':
 
     from DEX.UniswapV2 import UniswapV2
 
-    # quotes_input_abi = get_function_abi('Uniswap-v3/Quoter', 'quoteExactInputSingle')
+    # quotes_input_abi = get_function_abi('UniswapV3/Quoter', 'quoteExactInputSingle')
     # print(encode_function_abi(quotes_input_abi))
     load_dotenv()
-    INFURA_MAINNET = os.environ['INFURA_API_KEY']
-    client = UniswapV2("Etherium", "MAINNET", INFURA_MAINNET)
-    print(client.factory.functions.allPairsLength().call())
-    # pair_created_event_signature = client.web3_client.keccak(
+    INFURA_MAINNET = os.environ['INFURA_MAINNET']
+    client = UniswapV2("Ethereum", "MAINNET", web3_provider=INFURA_MAINNET, slippage=0.2)
+    usdc = get_contract(client.web3_client, 'General/multicall', "Ethereum", "Mainnet")
+    print(usdc.functions.decimals().call())
+    # pair_created_event_signature = client.web3_client.keccak(address="0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
     #     text="PairCreated (index_topic_1 address token0, index_topic_2 address token1, address pair, uint256 noname)").hex()
     # filter_params = {
     #     'fromBlock': 12000835,

@@ -7,7 +7,7 @@ DG = nx.DiGraph()
 uniswapv2 = 'UniswapV2'
 uniswapv3 = 'UniswapV3'
 sushi2 = 'SushiSwapV2'
-sushi3 = 'SushiSwapV3'
+sushi3 = 'SushiSwapV2'
 
 pair_list = ['weth-usdc', 'weth-usdt', 'wbtc-usdt', 'wbtc-usdc']
 action = ['buy', 'sell']

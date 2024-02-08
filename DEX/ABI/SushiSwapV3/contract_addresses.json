@@ -1,14 +1,14 @@
 {
   "Factory": {
-    "Ethereum": {
+    "ETHEREUM": {
       "MAINNET": "0xbACEB8eC6b9355Dfc0269C18bac9d6E2Bdc29C4F",
       "TESTNET": ""
     },
-    "Arbitrum": {
+    "ARBITRUM": {
       "MAINNET": "0x1af415a1EbA07a4986a52B6f2e7dE7003D82231e",
       "TESTNET": ""
     },
-    "Avalanche": {
+    "AVALANCHE": {
       "MAINNET": "0x3e603C14aF37EBdaD31709C4f848Fc6aD5BEc715",
       "TESTNET": ""
     },
@@ -16,29 +16,29 @@
       "MAINNET": "0x126555dd55a39328F69400d6aE4F782Bd4C34ABb",
       "TESTNET": ""
     },
-    "Linea": {
+    "LINEA": {
       "MAINNET": "0xc35DADB65012eC5796536bD9864eD8773aBc74C4",
       "TESTNET": ""
     },
-    "Optimism": {
+    "OPTIMISM": {
       "MAINNET": "0x9c6522117e2ed1fE5bdb72bb0eD5E3f2bdE7DBe0",
       "TESTNET": ""
     },
-    "Polygon": {
+    "POLYGON": {
       "MAINNET": "0x917933899c6a5F8E37F31E19f92CdBFF7e8FF0e2",
       "TESTNET": ""
     }
   },
   "QuoterV2": {
-    "Ethereum": {
+    "ETHEREUM": {
       "MAINNET": "0x64e8802FE490fa7cc61d3463958199161Bb608A7",
       "TESTNET": ""
     },
-    "Arbitrum": {
+    "ARBITRUM": {
       "MAINNET": "0x0524E833cCD057e4d7A296e3aaAb9f7675964Ce1",
       "TESTNET": ""
     },
-    "Avalanche": {
+    "AVALANCHE": {
       "MAINNET": "0xb1E835Dc2785b52265711e17fCCb0fd018226a6e",
       "TESTNET": ""
     },
@@ -46,29 +46,29 @@
       "MAINNET": "0xb1E835Dc2785b52265711e17fCCb0fd018226a6e",
       "TESTNET": ""
     },
-    "Linea": {
+    "LINEA": {
       "MAINNET": "0xFB7eF66a7e61224DD6FcD0D7d9C3be5C8B049b9f",
       "TESTNET": ""
     },
-    "Optimism": {
+    "OPTIMISM": {
       "MAINNET": "0xb1E835Dc2785b52265711e17fCCb0fd018226a6e",
       "TESTNET": ""
     },
-    "Polygon": {
+    "POLYGON": {
       "MAINNET": "0xb1E835Dc2785b52265711e17fCCb0fd018226a6e",
       "TESTNET": ""
     }
   },
   "SwapRouter": {
-    "Ethereum": {
+    "ETHEREUM": {
       "MAINNET": "0x2E6cd2d30aa43f40aa81619ff4b6E0a41479B13F",
       "TESTNET": ""
     },
-    "Arbitrum": {
+    "ARBITRUM": {
       "MAINNET": "0x8A21F6768C1f8075791D08546Dadf6daA0bE820c",
       "TESTNET": ""
     },
-    "Avalanche": {
+    "AVALANCHE": {
       "MAINNET": "0x8E4638eefee96732C56291fBF48bBB98725c6b31",
       "TESTNET": ""
     },
@@ -76,15 +76,15 @@
       "MAINNET": "0x909662a99605382dB1E8d69cc1f182bb577d9038",
       "TESTNET": ""
     },
-    "Linea": {
+    "LINEA": {
       "MAINNET": "0xb1E835Dc2785b52265711e17fCCb0fd018226a6e",
       "TESTNET": ""
     },
-    "Optimism": {
+    "OPTIMISM": {
       "MAINNET": "0x8c32Fd078B89Eccb06B40289A539D84A4aA9FDA6",
       "TESTNET": ""
     },
-    "Polygon": {
+    "POLYGON": {
       "MAINNET": "0x0aF89E1620b96170e2a9D0b68fEebb767eD044c3",
       "TESTNET": ""
     }

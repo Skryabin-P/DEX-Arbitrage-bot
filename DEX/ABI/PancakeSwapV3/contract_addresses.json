@@ -1,6 +1,6 @@
 {
   "Factory": {
-    "Ethereum": {
+    "ETHEREUM": {
       "MAINNET": "0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865",
       "TESTNET": "0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865"
     },
@@ -8,17 +8,17 @@
       "MAINNET": "0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865",
       "TESTNET": "0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865"
     },
-    "Arbitrum": {
+    "ARBITRUM": {
       "MAINNET": "0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865",
       "TESTNET": "0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865"
     },
-    "Linea": {
+    "LINEA": {
       "MAINNET": "0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865",
       "TESTNET": "0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865"
     }
   },
   "QuoterV2": {
-    "Ethereum": {
+    "ETHEREUM": {
       "MAINNET": "0xB048Bbc1Ee6b733FFfCFb9e9CeF7375518e25997",
       "TESTNET": "0xbC203d7f83677c7ed3F7acEc959963E7F4ECC5C2"
     },
@@ -26,17 +26,17 @@
       "MAINNET": "0xB048Bbc1Ee6b733FFfCFb9e9CeF7375518e25997",
       "TESTNET": "0xbC203d7f83677c7ed3F7acEc959963E7F4ECC5C2"
     },
-    "Arbitrum": {
+    "ARBITRUM": {
       "MAINNET": "0xB048Bbc1Ee6b733FFfCFb9e9CeF7375518e25997",
       "TESTNET": ""
     },
-    "Linea": {
+    "LINEA": {
       "MAINNET": "0xB048Bbc1Ee6b733FFfCFb9e9CeF7375518e25997",
       "TESTNET": ""
     }
   },
   "SwapRouter": {
-    "Ethereum": {
+    "ETHEREUM": {
       "MAINNET": "0x1b81D678ffb9C0263b24A97847620C99d213eB14",
       "TESTNET": "0x1b81D678ffb9C0263b24A97847620C99d213eB14"
     },
@@ -44,11 +44,11 @@
       "MAINNET": "0x1b81D678ffb9C0263b24A97847620C99d213eB14",
       "TESTNET": "0x1b81D678ffb9C0263b24A97847620C99d213eB14"
     },
-    "Arbitrum": {
+    "ARBITRUM": {
       "MAINNET": "0x1b81D678ffb9C0263b24A97847620C99d213eB14",
       "TESTNET": ""
     },
-    "Linea": {
+    "LINEA": {
       "MAINNET": "0x1b81D678ffb9C0263b24A97847620C99d213eB14",
       "TESTNET": ""
     }

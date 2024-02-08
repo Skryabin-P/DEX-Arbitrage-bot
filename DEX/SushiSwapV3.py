@@ -3,9 +3,9 @@ from DEX.BaseToken import BaseToken
 
 class SushiSwapV3(UniswapV3):
     quoter_ver = "v2"
-    abi_folder = "SushiSwap-v3"
-    multicall_abi = "ERC20/multicall"
-    router_abi = 'SushiSwap-v3/SwapRouter'
+    abi_folder = "SushiSwapV3"
+    multicall_abi = "General/multicall"
+    router_abi = 'SushiSwapV3/SwapRouter'
     def encode_buy_order(self, base_asset: BaseToken, quote_asset: BaseToken, amount_in, amount_out):
         amount_in = int(amount_in * 10 ** quote_asset.decimals)
         amount_out = int(amount_out * 10 ** base_asset.decimals)
