@@ -4,6 +4,7 @@ from DEX.UniswapV2 import UniswapV2
 class SushiSwapV2(UniswapV2):
     router_abi = "SushiSwapV2/Router02"
 
+
 if __name__ == "__main__":
     import os
     from dotenv import load_dotenv

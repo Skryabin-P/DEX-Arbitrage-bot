@@ -21,10 +21,11 @@ class BaseToken:
             self.address = args[1]
             self.decimals = args[2]
         if kwargs:
-            required_kwargs = ('symbol', 'address', 'decimals')
-            for arg in required_kwargs:
-                if arg not in kwargs.keys():
-                    raise AttributeError(f"BaseToken required `{arg}` argument")
+            required_kwargs = {'symbol', 'address', 'decimals'}
+
+            if set(kwargs.keys()).issuperset(required_kwargs):
+                raise AttributeError(f"BaseToken required {len(required_kwargs)} keyword arguments,"
+                                     f" but {len(kwargs)} was given")
             self.symbol = kwargs['symbol']
             self.address = kwargs['address']
             self.decimals = kwargs['decimals']

@@ -1,10 +1,11 @@
-from DEX.UniswapV3 import UniswapV3
+from DEX.SushiSwapV3 import SushiSwapV3
 
 
-class PancakeSwapV3(UniswapV3):
+class PancakeSwapV3(SushiSwapV3):
     quoter_ver = "v2"
     multicall_abi = "General/multicall"
     abi_folder = "PancakeSwapV3"
+    router_abi = 'SushiSwapV3/SwapRouter'
 
 
 if __name__ == "__main__":
@@ -15,13 +16,3 @@ if __name__ == "__main__":
 
     load_dotenv()
     net = os.environ['INFURA_MAINNET']
-
-    client = PancakeSwapV3(net, fee=500)
-    print(client.pair_list)
-    client.update_price_book(1)
-    print(client.price_book)
-    time.sleep(1)
-    client.update_price_book(1)
-    print(client.price_book)
-    client.update_price_book(1)
-    print(client.price_book)

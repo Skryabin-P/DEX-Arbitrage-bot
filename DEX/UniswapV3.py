@@ -1,11 +1,8 @@
-import time
 from web3._utils.abi import get_abi_output_types
 from .BaseExchange import BaseExchange
 from .BaseToken import BaseToken
-from .utils import get_contract, exec_time, get_function_abi
-import requests
+from .utils import get_contract, get_function_abi
 from numbers import Real
-from eth_utils import to_bytes
 
 
 class UniswapV3(BaseExchange):
@@ -15,20 +12,18 @@ class UniswapV3(BaseExchange):
     multicall_abi = "General/multicall"
     router_abi = 'UniswapV3/SwapRouter02'
 
-    def __init__(self, network, subnet, fee=None, web3_provider=None, slippage=None, num_pairs: int = 10):
-        super().__init__(network, subnet, web3_provider, slippage)
-        self.num_pairs = num_pairs
+    def __init__(self, network, subnet, fee=None, web3_provider=None):
+        super().__init__(network, subnet, web3_provider)
         self._quoter = None
         self._quoter_abi_suffix = None
         self._quoter_abi = None
-        self._multicall = None
         self._quoter_output_types = None
-        self._quoter_calls = None
         self.fee = fee
         self.name = self.__class__.__name__ + '/' + str(self.fee)
 
     @property
     def fee(self):
+        # pool fee [100, 500, 3000, 10000] -> [0.01%, 0.05%, 0.3%, 1%]
         return self._fee
 
     @fee.setter
@@ -56,7 +51,7 @@ class UniswapV3(BaseExchange):
 
     @property
     def quoter(self):
-        # Quoter V1 or V2 contract on Uniswap
+        # Quoter V1 or V2 contract instance on Uniswap V3
         if self._quoter is None:
             self._quoter = get_contract(self.web3_client,
                                         abi_name=f'{self.abi_folder}/Quoter{self.quoter_abi_suffix}',
@@ -65,6 +60,10 @@ class UniswapV3(BaseExchange):
 
     @property
     def weth_addr(self):
+        """
+        @return: Wrapped Eth address in Ethereum Network
+        or Wrapped Matic address in Polygon Network, etc
+        """
         if self._weth_addr is None:
             self._weth_addr = self.quoter.functions.WETH9().call()
         return self._weth_addr
@@ -86,8 +85,15 @@ class UniswapV3(BaseExchange):
 
     def _encode_sell_price_func(self, base_asset: BaseToken, quote_asset: BaseToken, amount: Real = 1):
         """
+        How much base asset tokens we must pass in
+        to get exact amount of quote asset tokens
+
         ver - version of Quoter contract. Only "v1" or "v2" can be set
-        returns encoded  sell function for pushing to multicall contract
+        @param base_asset: first asset in the pair
+        @param quote_asset: second asset in the pair
+        @param amount: quote asset token amount
+        @return: encoded quoteExactOutputSingle function of a Quoter contract
+        to push it in a multicall contract
         """
         converted_amount = int(amount * 10 ** quote_asset.decimals)
         if self.quoter_ver == "v1":
@@ -110,7 +116,14 @@ class UniswapV3(BaseExchange):
 
     def _encode_buy_price_func(self, base_asset: BaseToken, quote_asset: BaseToken, amount: Real = 1):
         """
-        returns encoded  buy function for pushing to milticall contract
+        How much base asset tokens we could get if we pass in
+        exact amount of quote asset tokens
+
+        @param base_asset: first asset in the pair
+        @param quote_asset: second asset in the pair
+        @param amount: quote asset token amount
+        @return: encoded quoteExactInputSingle function of a Quoter contract
+        to push it in a multicall contract
         """
         converted_amount = int(amount * 10 ** quote_asset.decimals)
         if self.quoter_ver == "v1":
@@ -132,67 +145,52 @@ class UniswapV3(BaseExchange):
         else:
             raise ValueError(f'quoter_ver might be Only "v1" or "v2", got {self.quoter_ver} instead')
 
-    def encode_sell_order(self, base_asset: BaseToken, quote_asset: BaseToken, amount_in: Real, amount_out):
+    def encode_buy_order(self, base_asset: BaseToken, quote_asset: BaseToken,
+                         amount_in, amount_out, address_to, slippage):
+        """
+        @param base_asset: first token in pair
+        @param quote_asset: second token in pair
+        @param amount_in: quote asset token amount to buy
+        @param amount_out: desired base asset token amount out
+        @param address_to: address to account out tokens
+        @param slippage: a float from 0 to 1, set the maximum difference
+        between expected amount and minimum amount out
+        @return: encoded swapExactTokensForTokens function of router contract,
+        amount_out_min(with slippage)
+        """
 
-        amount_out = int(amount_out * 10 ** quote_asset.decimals)
-        amount_in = int(amount_in * 10 ** base_asset.decimals)
+        if slippage < 0 or slippage > 1:
+            raise ValueError("Slippage must be from 0 to 1")
 
-        amount_in_max = int((1 + self.slippage) * amount_in)
-        router_struct = {
-            "tokenIn": base_asset.address,
-            "tokenOut": quote_asset.address,
-            "fee": self.fee,
-            "recipient": self.arbitrage_contract.address,
-            "deadline": self._deadline(),
-            "amountOut": amount_out,
-            "amountInMaximum": amount_in_max,
-            "sqrtPriceLimitX96": 0,
-        }
-
-        struct = (base_asset.address, quote_asset.address, self.fee,
-                  self.arbitrage_contract.address, amount_out, amount_in_max, 0)
-
-        return self.router.encodeABI(fn_name='exactOutputSingle',
-                                     args=[struct]), amount_out / 10 ** quote_asset.decimals
-
-    def encode_buy_order(self, base_asset: BaseToken, quote_asset: BaseToken, amount_in: Real, amount_out):
         amount_in = int(amount_in * 10 ** quote_asset.decimals)
         amount_out = int(amount_out * 10 ** base_asset.decimals)
-        amount_out_min = int((1 - self.slippage) * amount_out)
-        router_struct = {
-            "tokenIn": quote_asset.address,
-            "tokenOut": base_asset.address,
-            "fee": self.fee,
-            "recipient": self.arbitrage_contract.address,
-            "deadline": self._deadline(),
-            "amountIn": amount_in,
-            "amountOutMinimum": amount_out_min,
-            "sqrtPriceLimitX96": 0
-        }
+        amount_out_min = int((1 - slippage) * amount_out)
         struct = (quote_asset.address, base_asset.address, self.fee,
-                  self.arbitrage_contract.address, amount_in, amount_out_min, 0)
+                  address_to, amount_in, amount_out_min, 0)
 
         return self.router.encodeABI(fn_name='exactInputSingle',
-                                     args=[struct]), amount_out_min / 10**base_asset.decimals
+                                     args=[struct]), amount_out_min / 10 ** base_asset.decimals
 
     @property
     def quoter_calls(self) -> list[tuple]:
-        # amount means amount of coins
-        #if self._quoter_calls is None:
-        self._quoter_calls = []
+        """
+        @return: data for calling multical contract,
+        for getting quotes from Quoter v1 or v2 contract via multicall,
+        contains list of tuples (calling_address, encoded data )
+        """
+        quoter_calls = []
         for tokens in self.pair_list.values():
             base_asset = tokens['base_asset']
             quote_asset = tokens['quote_asset']
-            # if base_asset.symbol == 'SUSHI':
-            #     print(1)
             quote_currency_amount = self.quote_asset_prices[quote_asset.symbol]
             buy_call = self._encode_buy_price_func(base_asset, quote_asset, quote_currency_amount)
             sell_call = self._encode_sell_price_func(base_asset, quote_asset, quote_currency_amount)
-            self._quoter_calls.append((self.quoter.address, buy_call))
-            self._quoter_calls.append((self.quoter.address, sell_call))
-        return self._quoter_calls
+            quoter_calls.append((self.quoter.address, buy_call))
+            quoter_calls.append((self.quoter.address, sell_call))
+        return quoter_calls
 
     def decode_multicall_quoter(self, multicall_raw_data):
+        # decode multicall output data and put price data to a quotes dictionary
         quotes = {}
         for i in range(0, len(multicall_raw_data), 2):
 
@@ -218,24 +216,10 @@ class UniswapV3(BaseExchange):
         return quotes
 
     def update_price_book(self):
-
-        # print(f'Update price book for {self.name}')
-
+        # Calls multicall and put prices to price_book property
         multicall_raw_data = self.multicall.functions.tryAggregate(
             False, self.quoter_calls).call()
-
         self.price_book = self.decode_multicall_quoter(multicall_raw_data)
-
-    def _fetch_top_volume_pools(self):
-        # deprecated
-        query = "{pools(first: %s, orderBy: volumeUSD, " \
-                "orderDirection: desc where: {feeTier:%s})" \
-                " {id " \
-                "token0 {id name symbol decimals }" \
-                "token1 { id name symbol decimals } } }" % (self.num_pairs, self.fee)
-        graph_endpoint = self.graph_endpoint
-        response = requests.post(graph_endpoint, json={'query': query})
-        return response.json()
 
 
 if __name__ == '__main__':
@@ -245,14 +229,3 @@ if __name__ == '__main__':
     load_dotenv()
     api_key = os.environ['INFURA_API_KEY']
 
-    # TODO: Try to use multicall not async , drop async if multicall is better - DONE
-    # TODO: Think about gas fee... seems it can be calculated before transaction sending. QuoterV2 !!!
-    #  it returns estimate gas, sqrtprice after and so on
-    # TODO: Think about quoter amount, how to calculate , may be set amount in usdt and then transform to tokens amount
-    # TODO: May be get balances in pool and take price for only 5-10% in depth for each pair
-
-    # TODO: !!! GET TOKEN PAIRS FOR EVERY NETWORK SEPARATELY
-
-    # TODO: Try to use Quoter v2 - done!
-
-    # TODO: Add other networks contracts addresses, sub-graphs and add options for picking them

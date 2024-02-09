@@ -15,6 +15,12 @@ class BaseExchange:
     router_abi = ''
 
     def __init__(self, network, subnet, web3_provider=None):
+        """
+        @param network: Network name like "Ethereum", "Polygon", etc.
+        All available networks in available_networks property
+        @param subnet: MAINNET or TESTNET
+        @param web3_provider: HTTP or HTTPS url for connecting to RPC node
+        """
         self._pair_list = None
         self._weth_addr = None
         self._multicall = None

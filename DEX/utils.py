@@ -1,13 +1,12 @@
 import time
-
-import web3
 from web3 import Web3, AsyncWeb3
 import json
 from pathlib import Path
-from web3.types import ABIFunction, Address
+from web3.types import ABIFunction
 from eth_utils import encode_hex, function_abi_to_4byte_selector
 from functools import wraps
 import os
+
 
 def _get_abi(abi_name: str):
     abi_path = f'{os.path.dirname(os.path.abspath(__file__))}' \
@@ -87,21 +86,9 @@ if __name__ == '__main__':
 
     from DEX.UniswapV2 import UniswapV2
 
-    # quotes_input_abi = get_function_abi('UniswapV3/Quoter', 'quoteExactInputSingle')
-    # print(encode_function_abi(quotes_input_abi))
     load_dotenv()
     INFURA_MAINNET = os.environ['INFURA_MAINNET']
-    client = UniswapV2("Ethereum", "MAINNET", web3_provider=INFURA_MAINNET, slippage=0.2)
+    client = UniswapV2("Ethereum", "MAINNET", web3_provider=INFURA_MAINNET)
     usdc = get_contract(client.web3_client, 'General/multicall', "Ethereum", "Mainnet")
     print(usdc.functions.decimals().call())
-    # pair_created_event_signature = client.web3_client.keccak(address="0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
-    #     text="PairCreated (index_topic_1 address token0, index_topic_2 address token1, address pair, uint256 noname)").hex()
-    # filter_params = {
-    #     'fromBlock': 12000835,
-    #     'toBlock': 'latest',
-    #
-    # }
-    # logs = client.factory.events.PairCreated().get_logs(fromBlock=0xE4E57A, toBlock=0xE9B24F)
-    #
-    # for log in logs:
-    #     print(log)
+

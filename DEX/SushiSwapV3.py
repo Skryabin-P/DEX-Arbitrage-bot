@@ -6,41 +6,38 @@ class SushiSwapV3(UniswapV3):
     abi_folder = "SushiSwapV3"
     multicall_abi = "General/multicall"
     router_abi = 'SushiSwapV3/SwapRouter'
-    def encode_buy_order(self, base_asset: BaseToken, quote_asset: BaseToken, amount_in, amount_out):
+
+    def encode_buy_order(self, base_asset: BaseToken, quote_asset: BaseToken, amount_in, amount_out, address_to, slippage):
+        """
+        @param base_asset: first token in pair
+        @param quote_asset: second token in pair
+        @param amount_in: quote asset token amount to buy
+        @param amount_out: desired base asset token amount out
+        @param address_to: address to account out tokens
+        @param slippage: a float from 0 to 1, set the maximum difference
+        between expected amount and minimum amount out
+        @return: encoded swapExactTokensForTokens function of router contract,
+        amount_out_min(with slippage)
+        """
+        if slippage < 0 or slippage > 1:
+            raise ValueError("Slippage must be from 0 to 1")
+
         amount_in = int(amount_in * 10 ** quote_asset.decimals)
         amount_out = int(amount_out * 10 ** base_asset.decimals)
-        amount_out_min = int((1 - self.slippage) * amount_out)
+        amount_out_min = int((1 - slippage) * amount_out)
         router_struct = {
             "tokenIn": quote_asset.address,
             "tokenOut": base_asset.address,
             "fee": self.fee,
-            "recipient": self.arbitrage_contract.address,
+            "recipient": address_to,
             "deadline": self._deadline(),
             "amountIn": amount_in,
             "amountOutMinimum": amount_out_min,
             "sqrtPriceLimitX96": 0,
-
         }
         return self.router.encodeABI(fn_name='exactInputSingle',
                                      args=[router_struct]), amount_out_min / 10 ** base_asset.decimals
 
-    def encode_sell_order(self, base_asset: BaseToken, quote_asset: BaseToken, amount_in, amount_out):
-        amount_out = int(amount_out * 10 ** quote_asset.decimals)
-        amount_in = int(amount_in * 10 ** base_asset.decimals)
-
-        amount_in_max = int((1 + self.slippage) * amount_in)
-        router_struct = {
-            "tokenIn": base_asset.address,
-            "tokenOut": quote_asset.address,
-            "fee": self.fee,
-            "recipient": self.arbitrage_contract.address,
-            "deadline": self._deadline(),
-            "amountOut": amount_out,
-            "amountInMaximum": amount_in_max,
-            "sqrtPriceLimitX96": 0,
-        }
-        return self.router.encodeABI(fn_name='exactOutputSingle',
-                                     args=[router_struct]), amount_out / amount_out ** quote_asset.decimals
 
 if __name__ == "__main__":
     import os

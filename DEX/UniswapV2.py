@@ -11,7 +11,6 @@ class UniswapV2(BaseExchange):
 
     def __init__(self, network, subnet, web3_provider=None):
         super().__init__(network, subnet, web3_provider)
-        self._router_calls = None
         self._router_output_types = None
 
     @property
@@ -22,11 +21,12 @@ class UniswapV2(BaseExchange):
 
     def _encode_sell_price_func(self, base_asset: BaseToken, quote_asset: BaseToken, amount: Real = 1):
         """
-        Sell means that we put certain amount of our quote asset tokens
-        for getting base asset tokens
+        How much base asset tokens we must pass in
+        to get exact amount of quote asset tokens
+
         @param base_asset: first asset in the pair
         @param quote_asset: second asset in the pair
-        @param amount: amount of token for which get sell price
+        @param amount: quote asset token amount
         @return: encoded getAmountsIn router contract function
         for pushing to multicall contract
         """
@@ -37,11 +37,12 @@ class UniswapV2(BaseExchange):
 
     def _encode_buy_price_func(self, base_asset: BaseToken, quote_asset: BaseToken, amount: Real = 1):
         """
-        Buy means that we get our base asset tokens
-        for a certain amount of quote asset tokens
+        How much base asset tokens we could get if we pass in
+        exact amount of quote asset tokens
+
         @param base_asset: first asset in the pair
         @param quote_asset: second asset in the pair
-        @param amount: amount of token for which get buy price
+        @param amount: quote asset token amount
         @return: encoded getAmountsOut router contract function
         for pushing to multicall contract
         """
@@ -82,16 +83,16 @@ class UniswapV2(BaseExchange):
         contains list of tuples (calling_address, encoded data )
         """
         # amount means amount of coins
-        self._router_calls = []
+        router_calls = []
         for tokens in self.pair_list.values():
             base_asset = tokens['base_asset']
             quote_asset = tokens['quote_asset']
             quote_currency_amount = self.quote_asset_prices[quote_asset.symbol]
             buy_call = self._encode_buy_price_func(base_asset, quote_asset, quote_currency_amount)
             sell_call = self._encode_sell_price_func(base_asset, quote_asset, quote_currency_amount)
-            self._router_calls.append((self.router.address, buy_call))
-            self._router_calls.append((self.router.address, sell_call))
-        return self._router_calls
+            router_calls.append((self.router.address, buy_call))
+            router_calls.append((self.router.address, sell_call))
+        return router_calls
 
     @property
     def router_output_types(self) -> list[str]:
