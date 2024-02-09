@@ -14,7 +14,7 @@ class BaseExchange:
     _quote_asset_prices = None
     router_abi = ''
 
-    def __init__(self, network, subnet, web3_provider=None, slippage=None):
+    def __init__(self, network, subnet, web3_provider=None):
         self._pair_list = None
         self._weth_addr = None
         self._multicall = None
@@ -29,7 +29,6 @@ class BaseExchange:
         self.web3_provider = web3_provider
         self.web3_client = Web3(Web3.HTTPProvider(self.web3_provider, request_kwargs={'timeout': 600}))
         self.web3_client_async = AsyncWeb3(Web3.AsyncHTTPProvider(self.web3_provider))
-        self.slippage = slippage
 
     @property
     def network(self):
@@ -55,17 +54,6 @@ class BaseExchange:
                              f" got {subnet} instead")
         self._subnet = subnet
 
-    @property
-    def slippage(self):
-        return self._slippage
-
-    @slippage.setter
-    def slippage(self, slippage):
-        if not isinstance(slippage, float):
-            raise ValueError("Slippage must be a float")
-        if slippage >= 1:
-            raise ValueError("Slippage must be less than 1")
-        self._slippage = slippage
 
     @property
     def web3_provider(self):
@@ -73,6 +61,7 @@ class BaseExchange:
 
     @web3_provider.setter
     def web3_provider(self, provider: str):
+        # Just an HTTP/HTTPS RPC node url
         if not isinstance(provider, str):
             raise ValueError("Web3 provider must be an http/https url string")
         provider = provider.lower()
@@ -85,6 +74,7 @@ class BaseExchange:
 
     @property
     def price_book(self):
+        # Property which contains quotes from DEX for pairs in pair_list property
         return self._price_book
 
     @price_book.setter
@@ -95,6 +85,7 @@ class BaseExchange:
 
     @property
     def quote_asset_prices(self):
+        # Exchange rate between quote asset USDC, USDT, ETH and DAI
         return BaseExchange._quote_asset_prices
 
     @quote_asset_prices.setter
@@ -105,6 +96,13 @@ class BaseExchange:
 
     @property
     def available_networks(self):
+        """
+        There's contract_address.json In the Abi folder of each exchange
+        that contains addresses for different networks of some DEX contracts
+        like Quoter, SwapRouter, Factory. That property get networks
+        for a contract Factory in this file
+        @return: set of available networks
+        """
         if self._available_networks is None:
             with open(f'{os.path.dirname(os.path.abspath(__file__))}/'
                       f'ABI/{self.__class__.__name__}/contract_addresses.json', 'r') as file:
@@ -113,6 +111,7 @@ class BaseExchange:
 
     @property
     def multicall(self):
+        # multicall contract instance
         if self._multicall is None:
             self._multicall = get_contract(self.web3_client, abi_name=self.multicall_abi,
                                            net=self.network, subnet=self.subnet)
@@ -120,22 +119,16 @@ class BaseExchange:
 
     @property
     def router(self):
+        # router V2 or V3 contract instance
         if self._router is None:
             self._router = get_contract(self.web3_client, abi_name=self.router_abi,
                                         net=self.network, subnet=self.subnet)
         return self._router
 
-    @property
-    def arbitrage_contract(self):
-        if self._arbitrage_contract is None:
-            self._arbitrage_contract = get_contract(self.web3_client,
-                                                    abi_name='Arbitrage/Arbitrage',
-                                                    net=self.network,
-                                                    subnet=self.subnet)
-        return self._arbitrage_contract
 
     @property
     def factory(self):
+        # Factory contract instance
         if self._factory is None:
             self._factory = get_contract(self.web3_client, self.factory_abi,
                                          self.network, self.subnet)

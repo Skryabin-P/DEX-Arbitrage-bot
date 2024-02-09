@@ -1,9 +1,7 @@
-import time
 from web3._utils.abi import get_abi_output_types
 from DEX.BaseExchange import BaseExchange
 from DEX.BaseToken import BaseToken
-from DEX.utils import get_contract, exec_time, get_function_abi
-import requests
+from DEX.utils import exec_time, get_function_abi
 from numbers import Real
 
 
@@ -11,24 +9,10 @@ class UniswapV2(BaseExchange):
     router_abi = 'UniswapV2/Router02'
     factory_abi = 'UniswapV2/Factory'
 
-    def __init__(self, network, subnet, api_key=None, web3_provider=None, slippage=None, num_pairs: int = 10):
-        super().__init__(network, subnet, api_key, web3_provider, slippage)
-        self.num_pairs = num_pairs
-        self._router = None
-        self._multicall = None
+    def __init__(self, network, subnet, web3_provider=None):
+        super().__init__(network, subnet, web3_provider)
         self._router_calls = None
         self._router_output_types = None
-        self._graph_endpoint = None
-        self._web3_provider = None
-
-    @property
-    def router(self):
-        if self._router is None:
-            self._router = get_contract(self.web3_client, abi_name=self.router_abi,
-                                        net=self.network, subnet=self.subnet)
-        return self._router
-
-
 
     @property
     def weth_addr(self):
@@ -38,7 +22,13 @@ class UniswapV2(BaseExchange):
 
     def _encode_sell_price_func(self, base_asset: BaseToken, quote_asset: BaseToken, amount: Real = 1):
         """
-        returns encoded  sell function for pushing to multicall contract
+        Sell means that we put certain amount of our quote asset tokens
+        for getting base asset tokens
+        @param base_asset: first asset in the pair
+        @param quote_asset: second asset in the pair
+        @param amount: amount of token for which get sell price
+        @return: encoded getAmountsIn router contract function
+        for pushing to multicall contract
         """
         converted_amount = int(amount * 10 ** quote_asset.decimals)
         route = [base_asset.address, quote_asset.address, ]
@@ -47,38 +37,51 @@ class UniswapV2(BaseExchange):
 
     def _encode_buy_price_func(self, base_asset: BaseToken, quote_asset: BaseToken, amount: Real = 1):
         """
-        returns encoded  buy function for pushing to milticall contract
+        Buy means that we get our base asset tokens
+        for a certain amount of quote asset tokens
+        @param base_asset: first asset in the pair
+        @param quote_asset: second asset in the pair
+        @param amount: amount of token for which get buy price
+        @return: encoded getAmountsOut router contract function
+        for pushing to multicall contract
         """
         converted_amount = int(amount * 10 ** quote_asset.decimals)
         route = [quote_asset.address, base_asset.address]
-        # print(self.router.functions.getAmountsIn(converted_amount, route).call()[0] / 10 ** quote_asset.decimals)
         return self.router.encodeABI(fn_name='getAmountsOut',
                                      args=(converted_amount, route))
 
-    def encode_sell_order(self, base_asset: BaseToken, quote_asset: BaseToken, amount_in, amount_out):
-        converted_amount_in_max = int(amount_in * 10 ** base_asset.decimals) * (1+self.slippage)
-        route = [base_asset.address, quote_asset.address]
-        converted_amount_out= int(amount_out * 10 ** quote_asset.decimals )
-
-        return self.router.encodeABI(fn_name="swapTokensForExactTokens",
-                                     args=(converted_amount_in_max, converted_amount_out,
-                                           route, self.arbitrage_contract.address,
-                                           self._deadline())), converted_amount_out/ 10**quote_asset.decimals
-
-    def encode_buy_order(self, base_asset: BaseToken, quote_asset: BaseToken, amount_in, amount_out):
+    def encode_buy_order(self, base_asset: BaseToken, quote_asset: BaseToken,
+                         amount_in, amount_out, address_to, slippage):
+        """
+        @param base_asset: first token in pair
+        @param quote_asset: second token in pair
+        @param amount_in: quote asset token amount to buy
+        @param amount_out: desired base asset token amount out
+        @param address_to: address to account out tokens
+        @param slippage: a float from 0 to 1, set the maximum difference
+        between expected amount and minimum amount out
+        @return: encoded swapExactTokensForTokens function of router contract,
+        amount_out_min(with slippage)
+        """
+        if slippage < 0 or slippage > 1:
+            raise ValueError("Slippage must be from 0 to 1")
         converted_amount_in = int(amount_in * 10 ** quote_asset.decimals)
         route = [quote_asset.address, base_asset.address]
-        converted_amount_out_min = int(amount_out * 10 ** base_asset.decimals * (1-self.slippage))
+        converted_amount_out_min = int(amount_out * 10 ** base_asset.decimals * (1-slippage))
 
         return self.router.encodeABI(fn_name="swapExactTokensForTokens",
                                      args=(converted_amount_in, converted_amount_out_min,
-                                           route, self.arbitrage_contract.address,
+                                           route, address_to,
                                            self._deadline())), converted_amount_out_min / 10**base_asset.decimals
 
     @property
     def router_calls(self) -> list[tuple]:
+        """
+        @return: data for calling multical contract,
+        for getting quotes from router02 contract via multicall,
+        contains list of tuples (calling_address, encoded data )
+        """
         # amount means amount of coins
-        #if self._router_calls is None:
         self._router_calls = []
         for tokens in self.pair_list.values():
             base_asset = tokens['base_asset']
@@ -96,8 +99,8 @@ class UniswapV2(BaseExchange):
         I decided to use getAmountsIn for getting types,
         because it has the same types as getAmountsOut
 
-        return: list of string representation of types for decoding
-        after multicall
+        return: list of string representation of function
+        output types for decoding after multicall
         """
         if self._router_output_types is None:
             abi_function = get_function_abi(abi_name=self.router_abi,
@@ -105,17 +108,8 @@ class UniswapV2(BaseExchange):
             self._router_output_types = get_abi_output_types(abi_function)
         return self._router_output_types
 
-    def _fetch_top_volume_pairs(self):
-        # deprecated
-        query = "{pairs(first: %s, orderBy: reserveUSD  orderDirection: desc)" \
-                " {id " \
-                "token0 {id name symbol decimals }" \
-                "token1 { id name symbol decimals } } }" % self.num_pairs
-
-        response = requests.post(self.graph_endpoint, json={'query': query})
-        return response.json()
-
     def decode_multicall_router(self, multicall_raw_data):
+        # decode multicall output data and put price data to a quotes dictionary
         quotes = {}
         for i in range(0, len(multicall_raw_data), 2):
             pair = list(self.pair_list.keys())[i // 2]  # just pair name
@@ -139,16 +133,10 @@ class UniswapV2(BaseExchange):
         return quotes
 
     def update_price_book(self):
-
-        #print(f'Update price book for {self.name}')
-
+        # Calls multicall and put prices to price_book property
         multicall_raw_data = self.multicall.functions.tryAggregate(
             False, self.router_calls).call()
-
         self.price_book = self.decode_multicall_router(multicall_raw_data)
-
-
-
 
 
 if __name__ == '__main__':
@@ -158,11 +146,8 @@ if __name__ == '__main__':
     load_dotenv()
     net = "Ethereum"
     subnet = "MAINNET"
-    api_key = os.environ['INFURA_API_KEY']
-    client = UniswapV2(net, subnet, api_key, 1000.0)
+    w3_provider = os.environ['INFURA_MAINNET']
+    client = UniswapV2(net, subnet, w3_provider)
     client.pair_list = ['WETH-USDC', 'WBTC-Usdc']
     print(client.pair_list)
-    client.update_price_book()
-    print(client.price_book)
-
 
