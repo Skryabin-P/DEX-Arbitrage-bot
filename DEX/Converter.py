@@ -1,11 +1,11 @@
 import requests
-from itertools import permutations, combinations
 from numbers import Real
+
 
 class Converter:
     """
     Converts quote asset amount to other assets amount
-    based on quotes from Binance
+    based on quotes from Binance API
     """
 
     def __init__(self, quote_asset: str, quote_amount: Real):
@@ -14,7 +14,7 @@ class Converter:
                         'MATICUSDC', 'MATICETH', 'MATICUSDT']
         self.quote_asset = quote_asset
         self.quote_amount = quote_amount
-        self.coin_list = ['ETH', 'USDC', 'DAI', 'USDT', 'MATIC', 'USDC1']
+        self.coin_list = ['ETH', 'USDC', 'DAI', 'USDT', 'MATIC', 'USDC.E']
 
     @property
     def symbols(self):
@@ -37,7 +37,7 @@ class Converter:
     def quote_amount(self, amount: Real):
         if not isinstance(amount, Real):
             raise ValueError('Quote amount must be a real number!')
-        if amount <=0:
+        if amount <= 0:
             raise ValueError('Quote number must be positive!')
         self._quote_amount = amount
 
@@ -56,7 +56,6 @@ class Converter:
 
         self._quote_asset = asset
 
-
     def get_prices(self):
         url = f'https://api-gcp.binance.com/api/v3/' \
               f'ticker/price'
@@ -71,11 +70,11 @@ class Converter:
         self.matic_price = prices['MATIC-USDC']
         prices['USDC-DAI'] = prices['USDT-DAI'] / prices['USDC-USDT']
         prices['MATIC-DAI'] = prices['MATIC-ETH'] * prices['ETH-DAI']
-        prices['USDC1-USDT'] = prices['USDC-USDT']
-        prices['USDC-USDC1'] = 1
-        prices['ETH-USDC1'] = prices['ETH-USDC']
-        prices['MATIC-USDC1'] = prices['MATIC-USDC']
-        prices['USDC1-DAI'] = prices['USDC-DAI']
+        prices['USDC.E-USDT'] = prices['USDC-USDT']
+        prices['USDC-USDC.E'] = 1
+        prices['ETH-USDC.E'] = prices['ETH-USDC']
+        prices['MATIC-USDC.E'] = prices['MATIC-USDC']
+        prices['USDC.E-DAI'] = prices['USDC-DAI']
         revert_prices = {}
         # calculating revert pairs
         for price_key in prices:
@@ -91,7 +90,6 @@ class Converter:
             coin_position = symbol.find(coin)
             if coin_position == 0:
                 new_format_symbol = f"{symbol[:(len(coin))]}-{symbol[len(coin):]}"
-                #new_format_symbol = new_format_symbol.replace('ETH', 'WETH')
                 return new_format_symbol
 
     def convert(self):
@@ -111,6 +109,4 @@ class Converter:
 
 if __name__ == "__main__":
     converter = Converter('USDC', 100.585)
-    # print(converter.pairs)
     print(converter.convert())
-    # converter.get_prices()

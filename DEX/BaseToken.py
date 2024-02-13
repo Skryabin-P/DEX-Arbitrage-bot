@@ -23,9 +23,9 @@ class BaseToken:
         if kwargs:
             required_kwargs = {'symbol', 'address', 'decimals'}
 
-            if set(kwargs.keys()).issuperset(required_kwargs):
-                raise AttributeError(f"BaseToken required {len(required_kwargs)} keyword arguments,"
-                                     f" but {len(kwargs)} was given")
+            if not set(kwargs.keys()).issuperset(required_kwargs):
+                raise AttributeError(f"BaseToken required {','.join(required_kwargs)} mandatory keyword arguments,"
+                                     f" but {','.join(kwargs.keys())} was given")
             self.symbol = kwargs['symbol']
             self.address = kwargs['address']
             self.decimals = kwargs['decimals']
@@ -47,6 +47,8 @@ class BaseToken:
 
     @address.setter
     def address(self, value):
+        if not web3.Web3.is_address(value):
+            raise ValueError(f"Address must be must be a hex string starting with 0x")
         self._address = web3.Web3.to_checksum_address(value)
 
     @property

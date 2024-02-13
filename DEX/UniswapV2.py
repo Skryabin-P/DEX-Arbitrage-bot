@@ -1,7 +1,7 @@
 from web3._utils.abi import get_abi_output_types
 from DEX.BaseExchange import BaseExchange
 from DEX.BaseToken import BaseToken
-from DEX.utils import exec_time, get_function_abi
+from DEX.utils import get_function_abi
 from numbers import Real
 
 
@@ -9,8 +9,8 @@ class UniswapV2(BaseExchange):
     router_abi = 'UniswapV2/Router02'
     factory_abi = 'UniswapV2/Factory'
 
-    def __init__(self, network, subnet, web3_provider=None):
-        super().__init__(network, subnet, web3_provider)
+    def __init__(self, network, subnet, web3_provider=None, pairs=None):
+        super().__init__(network, subnet, web3_provider, pairs)
         self._router_output_types = None
 
     @property

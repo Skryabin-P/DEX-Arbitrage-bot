@@ -14,19 +14,19 @@ class BaseExchange:
     _quote_asset_prices = None
     router_abi = ''
 
-    def __init__(self, network, subnet, web3_provider=None):
+    def __init__(self, network, subnet, web3_provider=None, pairs=None):
         """
         @param network: Network name like "Ethereum", "Polygon", etc.
         All available networks in available_networks property
         @param subnet: MAINNET or TESTNET
         @param web3_provider: HTTP or HTTPS url for connecting to RPC node
+        @param pairs: List of pairs in format "Token0-Token1"
         """
         self._pair_list = None
         self._weth_addr = None
         self._multicall = None
         self._factory = None
         self._router = None
-        self._arbitrage_contract = None
         self._price_book = None
 
         self.name = self.__class__.__name__
@@ -35,7 +35,8 @@ class BaseExchange:
         self.web3_provider = web3_provider
         self.web3_client = Web3(Web3.HTTPProvider(self.web3_provider, request_kwargs={'timeout': 600}))
         self.web3_client_async = AsyncWeb3(Web3.AsyncHTTPProvider(self.web3_provider))
-
+        if pairs is not None:
+            self.pair_list = pairs
     @property
     def network(self):
         return self._network
@@ -79,7 +80,7 @@ class BaseExchange:
         self._web3_provider = provider
 
     @property
-    def price_book(self):
+    def price_book(self) -> dict:
         # Property which contains quotes from DEX for pairs in pair_list property
         return self._price_book
 
@@ -171,9 +172,9 @@ class BaseExchange:
             if len(search_result_symbol2) < 1:
                 raise ValueError(f"Couldn't find symbol {symbol2}, \n"
                                  f"Try to add manually using add_pair method")
-            token1 = BaseToken(**search_result_symbol1[0])
-            token2 = BaseToken(**search_result_symbol2[0])
-            self._pair_list[pair] = {'base_asset': token1, 'quote_asset': token2}
+            token0 = BaseToken(**search_result_symbol1[0])
+            token1 = BaseToken(**search_result_symbol2[0])
+            self._pair_list[pair] = {'base_asset': token0, 'quote_asset': token1}
 
     def encode_router_approve(self, token: BaseToken, amount):
         """
@@ -186,6 +187,20 @@ class BaseExchange:
                             self.subnet, token.address).encodeABI(fn_name='approve',
                                                                   args=(self.router.address,
                                                                         converted_amount))
+
+    def add_pair(self, token0: BaseToken, token1: BaseToken):
+        """
+        Add pair to pair_list property
+        @param token0: BaseToken obj of token0
+        @param token1: BaseToken obj of token1
+        """
+        if self._pair_list is None:
+
+            self.pair_list = {f"{token0.symbol.upper()}-{token1.symbol.upper()}":
+                                  {'base_asset': token0, 'quote_asset': token1}}
+        else:
+            self._pair_list[f"{token0.symbol.upper()}-{token1.symbol.upper()}"] =\
+                {'base_asset': token0, 'quote_asset': token1}
 
     @staticmethod
     def _deadline():

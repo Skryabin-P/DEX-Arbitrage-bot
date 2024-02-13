@@ -7,7 +7,8 @@ class SushiSwapV3(UniswapV3):
     multicall_abi = "General/multicall"
     router_abi = 'SushiSwapV3/SwapRouter'
 
-    def encode_buy_order(self, base_asset: BaseToken, quote_asset: BaseToken, amount_in, amount_out, address_to, slippage):
+    def encode_buy_order(self, base_asset: BaseToken, quote_asset: BaseToken,
+                         amount_in, amount_out, address_to, slippage):
         """
         @param base_asset: first token in pair
         @param quote_asset: second token in pair
@@ -42,13 +43,11 @@ class SushiSwapV3(UniswapV3):
 if __name__ == "__main__":
     import os
     from dotenv import load_dotenv
-    from utils import get_function_abi
-    import time
 
     load_dotenv()
-    api_key = os.environ['INFURA_API_KEY']
+    api_key = os.environ['INFURA_MAINNET']
 
-    client = SushiSwapV3('Polygon', 'MAINNET', fee=3000, api_key=api_key, slippage=0.001
+    client = SushiSwapV3('Polygon', 'MAINNET', fee=3000,
                          )
     client.pair_list = ['WMATIC-WETH']
     pair = client.pair_list['WMATIC-WETH']

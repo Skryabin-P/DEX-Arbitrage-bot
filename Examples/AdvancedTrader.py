@@ -1,17 +1,12 @@
 import time
 from web3 import Web3
-from asyncio import gather
 from eth_abi import encode
 from DEX.UniswapV3 import UniswapV3
-from DEX.UniswapV2 import UniswapV2
 from DEX.SushiSwapV2 import SushiSwapV2
 from DEX.SushiSwapV3 import SushiSwapV3
-from DEX.PancakeSwapV3 import PancakeSwapV3
-from DEX.PancakeSwapV2 import PancakeSwapV2
 from DEX.Converter import Converter
 from DEX.utils import get_contract
 from AdvancedScanner import AdvancedScanner
-import json
 from threading import Thread
 import codecs
 from operator import itemgetter
@@ -20,15 +15,16 @@ from operator import itemgetter
 class AdvancedTrader:
     w3: Web3
 
-    def __init__(self, *exchanges, converter, address, private_key, thd):
+    def __init__(self, *exchanges, quote_asset, quote_amount, address, private_key, thd, slippage):
         self.exchanges = {exchange.name: exchange for exchange in exchanges}
-        self.scanner = AdvancedScanner(self.exchanges, converter=converter)
-        self.converter = converter
+        self.scanner = AdvancedScanner(*exchanges, quote_asset=quote_asset, quote_amount=quote_amount)
+        self.converter = Converter(quote_asset, quote_amount)
         self.address = address
         self.private_key = private_key
         self.w3 = exchanges[0].web3_client
         self.thd = thd
-        self.quote_amount = converter.quote_amount
+        self.slippage = slippage
+        self.quote_amount = self.converter.quote_amount
         self.arbitrage_contract = get_contract(self.w3, 'Arbitrage/Arbitrage',
                                                'Polygon', 'MAINNET')
 
@@ -50,6 +46,7 @@ class AdvancedTrader:
                     routers = []
                     remainder = 0
                     for index, (step, prices) in enumerate(path.items()):
+                        # Loop through the arbitrage steps and collect all needed data for my smart contract
                         trade, amount_out_min, approve, quote_asset, router = \
                             self.encode_trade(step, prices, amount_in)
                         print(amount_out_min)
@@ -71,6 +68,7 @@ class AdvancedTrader:
                     self.prepare_tansaction()
                     gas = 250000 + 150000*len(trades)
                     if min_income > self.gas_price*gas * self.converter.matic_price / 10**18 * 1.05:
+                        # If potential income more than gas fees
                         request_flashloan = self.arbitrage_contract.functions.requestFlashLoan(
                             tokens[0], flashloan_amount,
                             encoded_data).build_transaction({"chainId": self.chain_id,
@@ -86,13 +84,11 @@ class AdvancedTrader:
                             print(tx_receipt)
                             time.sleep(1)
                             break
-                            continue
+
                         except Exception as e:
                             print(e)
                     else:
                         print('Potential income do not worth transaction fee')
-
-
                 time.sleep(10)
 
             except Exception as e:
@@ -102,6 +98,9 @@ class AdvancedTrader:
                 continue
 
     def encode_trade(self, step, prices, amount_in=None):
+        # encode order, approve
+        # returns encoded order, approve, amount_out_min,
+        # quote asset in this trade and router address
         exchange_name, pair, action = step.split('_')
         exchange = self.exchanges[exchange_name]
         if not amount_in:
@@ -116,7 +115,7 @@ class AdvancedTrader:
             amount_out = prices[0] * amount_in
 
         order, amount_out_min = exchange.encode_buy_order(
-            base_asset, quote_asset, amount_in, amount_out)
+            base_asset, quote_asset, amount_in, amount_out, self.slippage)
         approve = exchange.encode_router_approve(quote_asset, amount_in)
         approve = codecs.decode(approve[2:], 'hex_codec')
         order = codecs.decode(order[2:], 'hex_codec')
@@ -131,7 +130,9 @@ class AdvancedTrader:
 
     def get_gas_price(self):
         self.gas_price = self.w3.eth.gas_price
+
     def prepare_tansaction(self):
+        # get actual nonce, gas price and chain id
         thread1 = Thread(target=self.get_nonce())
         thread2 = Thread(target=self.get_chain_id())
         thread3 = Thread(target=self.get_gas_price())
@@ -144,76 +145,36 @@ class AdvancedTrader:
         thread2.join()
         thread3.join()
 
+
 if __name__ == "__main__":
     from dotenv import load_dotenv
     import os
 
     load_dotenv()
 
-    network = "Polygon"
+    net = "Polygon"
     subnet = "MAINNET"
     address = os.environ['address']
     private_key = os.environ['private_key']
-    api_key = os.environ['INFURA_API_KEY']
-    pair_list = ['WETH-usdc', 'AAVE-WETH', 'AAVE-USDC', 'WETH-USDT', 'WETH-DAI',
-                 'WBTC-WETH', 'LINK-WETH', 'LINK-USDC', 'LINK-USDT',
-                 'WMATIC-USDC', 'WMATIC-USDT', 'WMATIC-WETH', 'USDC-USDT']
-    uniswap_v3_pools_3000 = ['WMATIC-WETH', 'WBTC-USDC', 'LINK-USDC', 'WBTC-USDC1', 'LINK-USDC1', 'WMATIC-USDC',
-                             'VOXEL-USDC', 'WETH-USDC', 'UNI-USDC',
-                             'LINK-WETH', 'WBTC-WETH', 'WMATIC-USDC', 'AAVE-WETH',
-                             'VOXEL-USDC', 'WETH-USDC', 'WETH-USDT', 'UNI-WETH', 'UNI-USDC', 'UNI-USDT',
-                             'SUSHI-WETH', 'LINK-WMATIC']
-    uniswap_v3_pools_500 = ['WETH-USDC', 'WBTC-WETH', 'WMATIC-USDC', 'WMATIC-WETH', 'WMATIC-USDC',
-                            'WMATIC-USDT', 'WETH-USDC', 'WBTC-USDC', 'PAR-USDC',
-                            'WBTC-USDC1', 'LINK-USDC1', 'WMATIC-USDC', 'VOXEL-USDC', 'WETH-USDC', 'UNI-USDC']
+    web3_provider = os.environ['INFURA_POLYGON']
+    uniswap_v3_pools_3000 = ['WMATIC-WETH', 'WETH-USDC', 'WBTC-WETH', 'WMATIC-USDC', 'LINK-WETH', 'WETH-USDT']
+    uniswap_v3_pools_500 = ['WMATIC-WETH', 'WETH-USDC', 'WBTC-WETH', 'WMATIC-USDC', 'LINK-WETH', 'WETH-USDT']
+    sushi3_pools_3000 = ['WMATIC-WETH', 'WETH-USDC', 'WBTC-WETH', 'WMATIC-USDC', 'LINK-WETH', 'WETH-USDT']
+    sushi3_pools_500 = ['WMATIC-WETH', 'WETH-USDC', 'WBTC-WETH', 'WMATIC-USDC', 'LINK-WETH', 'WETH-USDT']
+    sushi2_pairs = ['WMATIC-WETH', 'WETH-USDC', 'WBTC-WETH', 'WMATIC-USDC', 'LINK-WETH', 'WETH-USDT']
 
-    sushi3_pools_3000 = ['WETH-USDC', 'WBTC-USDC', 'SUSHI-WETH', 'WETH-USDT', 'MANA-WETH',
-                         'WBTC-WETH', 'STG-USDC', 'AVAX-WETH', 'WMATIC-USDC', 'WMATIC-WETH',
-                         'WMATIC-USDT', 'AAVE-WETH', 'WMATIC-DAI', 'WETH-DAI', 'BAL-USDC',
-                         'MVI-USDT', 'SUSHI-USDC', 'CRV-WETH', 'LINK-WMATIC',
-                         'WBTC-USDC1', 'LINK-USDC1', 'WMATIC-USDC', 'VOXEL-USDC', 'WETH-USDC', 'UNI-USDC']
-    sushi3_pools_500 = ['WMATIC-USDC', 'WMATIC-WETH', 'CGG-WETH', 'WETH-USDC', 'WMATIC-USDT',
-                        'WMATIC-DAI', 'WBTC-USDT', 'WETH-DAI',
-                        'WBTC-USDC1', 'LINK-USDC1', 'WMATIC-USDC', 'VOXEL-USDC', 'WETH-USDC', 'UNI-USDC']
-
-    sushi2_pairs = ['WMATIC-WETH', 'STG-USDC', 'NCT-USDC', 'KLIMA-USDC', 'WETH-USDC',
-                    'WBTC-WETH', 'WETH-DAI', 'AAVE-WETH', 'WMATIC-USDC', 'LINK-WETH', 'WETH-USDT',
-                    'AVAX-WETH', 'MANA-WETH', 'CRV-WETH', 'UNI-WETH', 'BAL-WETH',
-                    'SUSHI-WETH', 'AAVE-WETH', 'UNI-USDC', 'UNI-WETH', 'LINK-WMATIC',
-                    'WBTC-USDC1', 'LINK-USDC1', 'WMATIC-USDC', 'VOXEL-USDC', 'WETH-USDC', 'UNI-USDC']
-
-    uniswap_v3_pools_100 = ['USDC-USDC1', 'USDC1-USDT', 'USDC1-DAI', 'USDC-USDT']
-    sushiswap_v3_pools_100 = ['USDC-USDC1', 'USDC1-USDT', 'USDC1-DAI', 'USDC-USDT']
-    converter = Converter('USDC', 10)
     slippage = 0.001
-    uniswap_v3_100 = UniswapV3(network, subnet, api_key, 100, slippage=slippage)
-    uniswap_v3_100.pair_list = uniswap_v3_pools_100
+    uniswapV3_3000 = UniswapV3(net, subnet, web3_provider, 3000, uniswap_v3_pools_3000)
+    uniswapV3_500 = UniswapV3(net, subnet, web3_provider, 500, uniswap_v3_pools_500)
+    sushi3_3000 = SushiSwapV3(net, subnet, web3_provider, 3000, sushi3_pools_3000)
+    sushi3_500 = SushiSwapV3(net, subnet, web3_provider, 500, sushi3_pools_500)
+    sushi2 = SushiSwapV2(net, subnet, web3_provider, sushi2_pairs)
 
-    uniswapv3_500 = UniswapV3(network, subnet, api_key, 500, slippage=slippage)
-    uniswapv3_500.pair_list = uniswap_v3_pools_500
-
-    uniswapv3_3000 = UniswapV3(network, subnet, api_key, 3000, slippage=slippage)
-    uniswapv3_3000.pair_list = uniswap_v3_pools_3000
-
-    sushi2 = SushiSwapV2(network, subnet, api_key, slippage=slippage)
-    sushi2.pair_list = sushi2_pairs
-
-    sushi3_100 = SushiSwapV3(network, subnet, api_key, 100, slippage=slippage)
-    sushi3_100.pair_list = sushiswap_v3_pools_100
-
-    sushi3_500 = SushiSwapV3(network, subnet, api_key, 500, slippage=slippage)
-    sushi3_500.pair_list = sushi3_pools_500
-
-    sushi3_3000 = SushiSwapV3(network, subnet, api_key, 3000, slippage=slippage)
-    sushi3_3000.pair_list = sushi3_pools_3000
-
-    trader = AdvancedTrader(uniswapv3_3000, uniswapv3_500, sushi2,
-                            sushi3_3000, sushi3_500, uniswap_v3_100, sushi3_100, converter=converter, address=address,
-                            private_key=private_key, thd=0.4)
+    trader = AdvancedTrader(uniswapV3_3000, uniswapV3_500, sushi2,
+                            sushi3_3000, sushi3_500, quote_asset='USDC', quote_amount=100, address=address,
+                            private_key=private_key, thd=0.4, slippage=slippage)
     trader.arbitrage()
 
-    # TODO: put pools with different comissions in one object, change exactInputSingle for exactOutputSingle, add more exchanges
-    # print(get_contract(sushi3_100.web3_client,
-    #                    abi_name="UniswapV3/Pool",
-    #                    address="0x0e44cEb592AcFC5D3F09D996302eB4C499ff8c10",
-    #                    net="Polygon", subnet="MAINNET").functions.slot0().call())
+    # TODO: put pools with different comissions in one object,
+    #  add more exchanges
+

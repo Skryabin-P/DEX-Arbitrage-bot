@@ -12,8 +12,8 @@ class UniswapV3(BaseExchange):
     multicall_abi = "General/multicall"
     router_abi = 'UniswapV3/SwapRouter02'
 
-    def __init__(self, network, subnet, fee=None, web3_provider=None):
-        super().__init__(network, subnet, web3_provider)
+    def __init__(self, network, subnet, web3_provider=None, fee=None, pairs=None):
+        super().__init__(network, subnet, web3_provider, pairs)
         self._quoter = None
         self._quoter_abi_suffix = None
         self._quoter_abi = None

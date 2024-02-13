@@ -1,0 +1,7 @@
+eth_abi==4.2.1
+eth_utils==2.2.2
+networkx==3.2.1
+prettytable==3.9.0
+python-dotenv==1.0.1
+Requests==2.31.0
+web3==6.11.0

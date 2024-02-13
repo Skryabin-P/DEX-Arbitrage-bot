@@ -54,4 +54,3 @@ venv/
 *.xls
 *xlsx
 *.pfx
-test.py
