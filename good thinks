@@ -1,8 +1,0 @@
-Uniswap v3 supports creating multiple pools of the same pair with varying fee tiers, v3 factory has a getPool function,
-taking two addresses and a fee. As opposed getPair which takes only the two addresses.
-The v3 pools use the token balances, which you can get by calling balanceOf on each token in the pair and passing the address of the pool.
-The mechanics across those two versions of the protocol vary quite a lot, so there isn't parity between most of the functions.
-
-
-
-

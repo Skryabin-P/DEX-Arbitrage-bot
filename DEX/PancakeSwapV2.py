@@ -2,18 +2,12 @@ from DEX.UniswapV2 import UniswapV2
 
 
 class PancakeSwapV2(UniswapV2):
-    router_abi = "PancakeSwapV2/Router02"
+    """
+    Child class of a UniswapV2
+    PancakeSwapV2 is a fork of Uniswap V2
+    """
 
-
-if __name__ == "__main__":
-    import os
-    from dotenv import load_dotenv
-    import time
-
-    load_dotenv()
-    api_key = os.environ['INFURA_API_KEY']
-    client = PancakeSwapV2("Polygon", "MAINNET", api_key)
-    print(client.pair_list)
-    client.update_price_book()
-    print(client.price_book)
-
+    def __init__(self, network, subnet, web3_provider=None, pairs=None):
+        super().__init__(network, subnet, web3_provider, pairs)
+        self.router_abi = "PancakeSwapV2/Router02"
+        self.factory_abi = 'PancakeSwapV2/Factory'

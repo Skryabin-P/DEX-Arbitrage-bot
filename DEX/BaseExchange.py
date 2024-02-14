@@ -1,18 +1,18 @@
 import json
 from web3 import Web3, AsyncWeb3
 from DEX.utils import get_contract
-from DEX.BaseToken import BaseToken
+from DEX.Token import Token
 import os
 from urllib.parse import urlparse
 import time
 
 
 class BaseExchange:
-    _available_networks = None
-    multicall_abi = 'General/multicall'
-    factory_abi = ''
-    _quote_asset_prices = None
-    router_abi = ''
+    """
+    The parent class for other Exchange classes
+    Contains main properties and methods
+    """
+
 
     def __init__(self, network, subnet, web3_provider=None, pairs=None):
         """
@@ -28,6 +28,11 @@ class BaseExchange:
         self._factory = None
         self._router = None
         self._price_book = None
+        self._available_networks = None
+        self.multicall_abi = 'General/multicall'
+        self.factory_abi = ''
+        self._quote_asset_prices = None
+        self.router_abi = ''
 
         self.name = self.__class__.__name__
         self.network = network
@@ -39,10 +44,16 @@ class BaseExchange:
             self.pair_list = pairs
     @property
     def network(self):
+        # Network name like Ethereum, Arbitrub, etc
         return self._network
 
     @network.setter
     def network(self, network):
+        """
+        Set the network property
+        @param network: name of the network like Ethereum, Arbitrub, Polygon
+        @raise ValueError: If passed network is not in available_networks
+        """
         if network.upper() not in self.available_networks:
             available_networks = ",".join(self.available_networks)
             raise ValueError(f"Network must be {available_networks}"
@@ -51,23 +62,35 @@ class BaseExchange:
 
     @property
     def subnet(self):
+        # MAINNET or TESTNET
         return self._subnet
 
     @subnet.setter
     def subnet(self, subnet):
+        """
+        Set the subnet property
+        @param subnet: name of the subnet, may be MAINNET or TESTNET
+        @raise ValueError: If passed subnet not MAINNET or TESTNET
+        """
         available_subnets = ['MAINNET', 'TESTNET']
         if subnet not in available_subnets:
-            raise ValueError(f"Subnet must be {str(',').join(available_subnets)}"
+            raise ValueError(f"Subnet must be {','.join(available_subnets)}"
                              f" got {subnet} instead")
         self._subnet = subnet
 
 
     @property
     def web3_provider(self):
+        # HTTP/HTTPS url blockhain rpc provider
         return self._web3_provider
 
     @web3_provider.setter
     def web3_provider(self, provider: str):
+        """
+        Set the web3_provider property
+        @param provider: an HTTP/HTTPS url blockhain rpc provider
+        @raise ValueError: If provider is not correct http/https url string
+        """
         # Just an HTTP/HTTPS RPC node url
         if not isinstance(provider, str):
             raise ValueError("Web3 provider must be an http/https url string")
@@ -86,6 +109,11 @@ class BaseExchange:
 
     @price_book.setter
     def price_book(self, price_book: dict):
+        """
+        Set the price_book property
+        @param price_book: A dictionary which contains prices
+        @raise ValueError: If passed price_book is not a dictionary
+        """
         if not isinstance(price_book, dict):
             raise ValueError('Price book must be a dictionary!')
         self._price_book = price_book
@@ -97,6 +125,11 @@ class BaseExchange:
 
     @quote_asset_prices.setter
     def quote_asset_prices(self, prices: dict):
+        """
+        Set quote_asset_prices property for every Exchange class
+        @param prices: a dictionary which contains prices for quote assets
+        @raise ValueError: If passed prices is not dictionary
+        """
         if not isinstance(prices, dict):
             raise ValueError('quote_asset_prices must be a dictionary!')
         BaseExchange._quote_asset_prices = prices
@@ -104,10 +137,9 @@ class BaseExchange:
     @property
     def available_networks(self):
         """
-        There's contract_address.json In the Abi folder of each exchange
-        that contains addresses for different networks of some DEX contracts
-        like Quoter, SwapRouter, Factory. That property get networks
-        for a contract Factory in this file
+        Every exchange class has own ABI folder containing contract addresses file
+        for all available networks DEX/ABI/{ExchangeName}/contract_addresses.json
+        That property gets available networks from this file for a Factory contract
         @return: set of available networks
         """
         if self._available_networks is None:
@@ -118,7 +150,11 @@ class BaseExchange:
 
     @property
     def multicall(self):
-        # multicall contract instance
+        """
+        Multicall is a special smart contract which can do
+        multiple read blockchain operations at once
+        @return: multicall contract instance
+        """
         if self._multicall is None:
             self._multicall = get_contract(self.web3_client, abi_name=self.multicall_abi,
                                            net=self.network, subnet=self.subnet)
@@ -126,7 +162,10 @@ class BaseExchange:
 
     @property
     def router(self):
-        # router V2 or V3 contract instance
+        """
+        Router or SwapRouter is a contract that is commonly used for trading purposes
+        @return: router contract instance for V2 or V3 exchange
+        """
         if self._router is None:
             self._router = get_contract(self.web3_client, abi_name=self.router_abi,
                                         net=self.network, subnet=self.subnet)
@@ -135,7 +174,10 @@ class BaseExchange:
 
     @property
     def factory(self):
-        # Factory contract instance
+        """
+        Factory is a contract that is commonly used for creation Pools or Pairs
+        @return: factory contract instance
+        """
         if self._factory is None:
             self._factory = get_contract(self.web3_client, self.factory_abi,
                                          self.network, self.subnet)
@@ -143,12 +185,21 @@ class BaseExchange:
 
     @property
     def pair_list(self) -> dict:
+        # Dictionary for pairs containing base and quote assets Token objects
         return self._pair_list
 
     @pair_list.setter
     def pair_list(self, pairs: list[str]):
         """
-        @param pairs: list of trading pairs in format token0-token1, with "-" delimiter between tokens
+        For a given pair finds tokens in DEX/resources/tokens/{current-network}.json
+        This token information was webscraped from different Exchange.
+        You can add tokens to this json files if you need. or with add_pair method
+        Creates Token objects for each token in pair and add them to a ditctionary
+        @param pairs: list of trading pairs in format "token0_name-token1_name", with "-" delimiter between tokens
+        @raise ValueError:
+            1. If passed pairs parameter is not a list
+            2. If pair in pairs list is not a string
+            3. If one or both tokens are not found
         """
         self._pair_list = {}
         if not isinstance(pairs, list):
@@ -172,15 +223,16 @@ class BaseExchange:
             if len(search_result_symbol2) < 1:
                 raise ValueError(f"Couldn't find symbol {symbol2}, \n"
                                  f"Try to add manually using add_pair method")
-            token0 = BaseToken(**search_result_symbol1[0])
-            token1 = BaseToken(**search_result_symbol2[0])
+            token0 = Token(**search_result_symbol1[0])
+            token1 = Token(**search_result_symbol2[0])
             self._pair_list[pair] = {'base_asset': token0, 'quote_asset': token1}
 
-    def encode_router_approve(self, token: BaseToken, amount):
+    def encode_router_approval(self, token: Token, amount):
         """
-        @param token: BaseToken object
-        @param amount: human-readable amount of token
-        @return: encoded approve function for exchange router with parameters
+        Encode ERC20 approve function for Router or SwapRouter contract
+        @param token: Token object
+        @param amount: human-readable amount of token, how many to approve
+        @return: encoded approve ERC20 function for exchange router with parameters
         """
         converted_amount = int(amount * 10 ** token.decimals)
         return get_contract(self.web3_client, 'General/erc20', self.network,
@@ -188,12 +240,17 @@ class BaseExchange:
                                                                   args=(self.router.address,
                                                                         converted_amount))
 
-    def add_pair(self, token0: BaseToken, token1: BaseToken):
+    def add_pair(self, token0: Token, token1: Token):
         """
         Add pair to pair_list property
-        @param token0: BaseToken obj of token0
-        @param token1: BaseToken obj of token1
+        @param token0: Token obj of token0
+        @param token1: Token obj of token1
+        @raise ValueError: If token0 or token1 is not Token objects
         """
+
+        if not isinstance(token0, Token) or not isinstance(token1, Token):
+            raise ValueError("token 0 and token1 must be the Token class instances!")
+
         if self._pair_list is None:
 
             self.pair_list = {f"{token0.symbol.upper()}-{token1.symbol.upper()}":

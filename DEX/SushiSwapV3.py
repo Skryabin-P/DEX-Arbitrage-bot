@@ -1,5 +1,5 @@
 from DEX.UniswapV3 import UniswapV3
-from DEX.BaseToken import BaseToken
+from DEX.Token import Token
 
 class SushiSwapV3(UniswapV3):
     quoter_ver = "v2"
@@ -7,7 +7,7 @@ class SushiSwapV3(UniswapV3):
     multicall_abi = "General/multicall"
     router_abi = 'SushiSwapV3/SwapRouter'
 
-    def encode_buy_order(self, base_asset: BaseToken, quote_asset: BaseToken,
+    def encode_buy_order(self, base_asset: Token, quote_asset: Token,
                          amount_in, amount_out, address_to, slippage):
         """
         @param base_asset: first token in pair

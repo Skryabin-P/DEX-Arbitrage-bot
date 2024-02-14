@@ -1,7 +1,7 @@
 import web3
 
 
-class BaseToken:
+class Token:
     """Base for tokens """
     def __init__(self, *args, **kwargs):
         """
@@ -64,7 +64,7 @@ class BaseToken:
 
 if __name__ == "__main__":
     kw = {'symbol': 'tEst', 'decimals': '6', 'address': '0xfaC38532829fDD744373fdcd4708Ab90fA0c4078'}
-    token = BaseToken(**kw)
+    token = Token(**kw)
     print(token.symbol)
     print(token.address)
     print(token.decimals)

@@ -1,15 +1,15 @@
 # DEX Library
 
-A small library for interacting with different decentralized exchanges (DEX)
-for now based on Uniswap V2 and V3. 
+A library for interacting with different decentralized exchanges (DEX).
+At the moment only based on Uniswap V2 and V3. 
 This library provides functionality for obtaining quotes,
-trades, and other operations related to decentralized exchanges.
+trades, and other operations related to the decentralized exchanges.
 
 ## Features
 
 - Obtain quotes for various tokens on different DEX platforms from different Networks
 - Encode trades and approves
-- Example scripts demonstrating library usage
+- Get example scripts demonstrating library usage
 
 ## Installation
 
@@ -83,13 +83,15 @@ Sell price:  0.8756930724042549
    But If one or both token not found when you try to set `pair_list`
 
     you can manually add it to `pair_list` property by this code
+
 ```python
 # Import the libraries
 from DEX.UniswapV3 import UniswapV3
-from DEX.BaseToken import BaseToken
+from DEX.Token import Token
 from DEX.Converter import Converter
 from dotenv import load_dotenv
 import os
+
 # load .env file
 load_dotenv()
 # get our http/https url for rpc node from environment variable
@@ -97,10 +99,10 @@ web3_provider = os.environ["INFURA_POLYGON"]
 # Create an instance of the UniswapV3 class
 pairs = ["WMATIC-WETH", "WMATIC-USDC"]
 fee = 500
-uniswap_v3 = UniswapV3("Polygon", "MAINNET",web3_provider, fee, pairs)
-token0 = BaseToken(symbol="myToken", address="0xF0245F6251Bef9447A08766b9DA2B07b28aD80B0",
-                   decimals=18)
-token1 = BaseToken("secondToken", "0x60e274B09F701107A4b3226fCC1376eBDa3cdd92", 6)
+uniswap_v3 = UniswapV3("Polygon", "MAINNET", web3_provider, fee, pairs)
+token0 = Token(symbol="myToken", address="0xF0245F6251Bef9447A08766b9DA2B07b28aD80B0",
+               decimals=18)
+token1 = Token("secondToken", "0x60e274B09F701107A4b3226fCC1376eBDa3cdd92", 6)
 uniswap_v3.add_pair(token0, token1)
 ```
 

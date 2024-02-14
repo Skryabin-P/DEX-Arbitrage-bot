@@ -1,16 +1,15 @@
 from web3._utils.abi import get_abi_output_types
 from .BaseExchange import BaseExchange
-from .BaseToken import BaseToken
+from .Token import Token
 from .utils import get_contract, get_function_abi
 from numbers import Real
 
 
 class UniswapV3(BaseExchange):
-    quoter_ver = "v2"  # quoter_ ver - version of Quoter contract. Only "v1" or "v2" can be set
-    abi_folder = "UniswapV3"
-    factory_abi = "UniswapV3/Factory"
-    multicall_abi = "General/multicall"
-    router_abi = 'UniswapV3/SwapRouter02'
+    """
+    Child class of a BaseExchange
+    Contains methods for interaction with Uniswap V3 exchange
+    """
 
     def __init__(self, network, subnet, web3_provider=None, fee=None, pairs=None):
         super().__init__(network, subnet, web3_provider, pairs)
@@ -18,16 +17,33 @@ class UniswapV3(BaseExchange):
         self._quoter_abi_suffix = None
         self._quoter_abi = None
         self._quoter_output_types = None
+        self.quoter_ver = "v2"  # quoter_ ver - version of Quoter contract. Only "v1" or "v2" can be set
+        self.abi_folder = "UniswapV3"
+        self.factory_abi = "UniswapV3/Factory"
+        self.multicall_abi = "General/multicall"
+        self.router_abi = 'UniswapV3/SwapRouter02'
+
         self.fee = fee
         self.name = self.__class__.__name__ + '/' + str(self.fee)
 
     @property
     def fee(self):
-        # pool fee [100, 500, 3000, 10000] -> [0.01%, 0.05%, 0.3%, 1%]
+        """
+        pool fee, may be [100, 500, 3000, 10000] -> [0.01%, 0.05%, 0.3%, 1%]
+        @return: pool fee
+        """
         return self._fee
 
     @fee.setter
     def fee(self, fee: int):
+        """
+        Set fee of the pools
+        @param fee: one of [100, 500, 3000, 10000]
+        @raise ValueError:
+            1. Not an integer
+            2. Less than 0
+            3. Not on of [100, 500, 3000, 10000]
+        """
         if fee is None:
             self._fee = 3000
         else:
@@ -35,10 +51,19 @@ class UniswapV3(BaseExchange):
                 raise ValueError('Fee must be an integer')
             if fee < 0:
                 raise ValueError('Fee can not be negative')
+            possible_fees = [100, 500, 3000, 10000]
+            if fee not in possible_fees:
+                raise ValueError(f"Fee must be on of {','.join(map(str, possible_fees))}")
             self._fee = fee
 
     @property
     def quoter_abi_suffix(self):
+        """
+        Get abi_name suffix for Quoter contract
+        Only "v1" or "v2" are possible
+        @return: quoter_abi_suffix
+        @raise: ValueError: if self.quoter_ver is not "v1" or "v2"
+        """
         if self._quoter_abi_suffix is None:
             if self.quoter_ver == "v1":
                 self._quoter_abi_suffix = ""
@@ -83,7 +108,7 @@ class UniswapV3(BaseExchange):
             self._quoter_output_types = get_abi_output_types(abi_function)
         return self._quoter_output_types
 
-    def _encode_sell_price_func(self, base_asset: BaseToken, quote_asset: BaseToken, amount: Real = 1):
+    def _encode_sell_price_func(self, base_asset: Token, quote_asset: Token, amount: Real = 1):
         """
         How much base asset tokens we must pass in
         to get exact amount of quote asset tokens
@@ -114,7 +139,7 @@ class UniswapV3(BaseExchange):
         else:
             raise ValueError(f'quoter_ver might be Only "v1" or "v2", got {self.quoter_ver} instead')
 
-    def _encode_buy_price_func(self, base_asset: BaseToken, quote_asset: BaseToken, amount: Real = 1):
+    def _encode_buy_price_func(self, base_asset: Token, quote_asset: Token, amount: Real = 1):
         """
         How much base asset tokens we could get if we pass in
         exact amount of quote asset tokens
@@ -145,7 +170,7 @@ class UniswapV3(BaseExchange):
         else:
             raise ValueError(f'quoter_ver might be Only "v1" or "v2", got {self.quoter_ver} instead')
 
-    def encode_buy_order(self, base_asset: BaseToken, quote_asset: BaseToken,
+    def encode_buy_order(self, base_asset: Token, quote_asset: Token,
                          amount_in, amount_out, address_to, slippage):
         """
         @param base_asset: first token in pair
@@ -174,6 +199,8 @@ class UniswapV3(BaseExchange):
     @property
     def quoter_calls(self) -> list[tuple]:
         """
+        For every pair in pair_list property we encode functions
+        for getting buy and sell prices and put it a list
         @return: data for calling multical contract,
         for getting quotes from Quoter v1 or v2 contract via multicall,
         contains list of tuples (calling_address, encoded data )
@@ -190,7 +217,11 @@ class UniswapV3(BaseExchange):
         return quoter_calls
 
     def decode_multicall_quoter(self, multicall_raw_data):
-        # decode multicall output data and put price data to a quotes dictionary
+        """
+        decode multicall output data and put price data to a quotes dictionary
+        @param multicall_raw_data: tha data that returns after calling multicall
+        @return: quotes dictionary
+        """
         quotes = {}
         for i in range(0, len(multicall_raw_data), 2):
 
@@ -216,7 +247,11 @@ class UniswapV3(BaseExchange):
         return quotes
 
     def update_price_book(self):
-        # Calls multicall and put prices to price_book property
+        """
+        Calls multicall contract to get quotes
+        then decode multicall and put quotes dictionary
+        to the price_book property
+        """
         multicall_raw_data = self.multicall.functions.tryAggregate(
             False, self.quoter_calls).call()
         self.price_book = self.decode_multicall_quoter(multicall_raw_data)
@@ -228,4 +263,3 @@ if __name__ == '__main__':
 
     load_dotenv()
     api_key = os.environ['INFURA_API_KEY']
-
