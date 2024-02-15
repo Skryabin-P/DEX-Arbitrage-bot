@@ -9,6 +9,11 @@ class Converter:
     """
 
     def __init__(self, quote_asset: str, quote_amount: Real):
+        """
+        @param quote_asset: asset in relation to which
+        determine the amount of other assets
+        @param quote_amount: amount of quote_asset
+        """
         self._symbols = None
         self.symbols = ['ETHUSDC', 'ETHUSDT', 'ETHDAI', 'USDCUSDT', 'USDTDAI',
                         'MATICUSDC', 'MATICETH', 'MATICUSDT']
@@ -18,10 +23,17 @@ class Converter:
 
     @property
     def symbols(self):
+        """
+        @return: Binance symbols to fetch prices
+        """
         return self._symbols
 
     @symbols.setter
     def symbols(self, symbols):
+        """
+        @param symbols: binance symbols, pairs like ETHUSDC, USDCUSDT
+        @raise ValueError: if passed symbols are not list
+        """
         if not isinstance(symbols, list):
             raise ValueError(f'Symbols must be a list, got {symbols} instead')
         pairs = []
@@ -31,10 +43,17 @@ class Converter:
 
     @property
     def quote_amount(self):
+        """
+        amount of quote_asset
+        """
         return self._quote_amount
 
     @quote_amount.setter
     def quote_amount(self, amount: Real):
+        """
+        @param amount: amount of quote asset token
+        @raise ValueError: if amount <=0 and not a real number
+        """
         if not isinstance(amount, Real):
             raise ValueError('Quote amount must be a real number!')
         if amount <= 0:
@@ -43,10 +62,20 @@ class Converter:
 
     @property
     def quote_asset(self):
+        """
+        @return: asset in relation to which
+        determine the amount of other assets
+        """
         return self._quote_asset
 
     @quote_asset.setter
     def quote_asset(self, asset: str):
+        """
+        @param asset: asset in relation to which
+        determine the amount of other assets
+        @raise ValueError: if passed asset not a string type,
+        and it is not in {symbols} property
+        """
         if not isinstance(asset, str):
             raise ValueError('Quote asset must be a string!')
         if asset not in self.symbols:
@@ -57,6 +86,11 @@ class Converter:
         self._quote_asset = asset
 
     def get_prices(self):
+        """
+        Fetch quotes from binance api for 1 token
+        and put it to a dictionary
+        @return: prices dictionary
+        """
         url = f'https://api-gcp.binance.com/api/v3/' \
               f'ticker/price'
         params = {"symbols": f'[{self.symbols}]'}
@@ -84,7 +118,11 @@ class Converter:
         return prices
 
     def _convert_binance_symbol_format(self, symbol: str):
-        # Converts Binance COIN1COIN2 format to COIN1-COIN2
+        """
+        Converts Binance COIN1COIN2 format to COIN1-COIN2
+        @param symbol: trading pair name in format COIN1COIN2
+        @return: trading pair name in format COIN1-COIN2
+        """
 
         for coin in self.coin_list:
             coin_position = symbol.find(coin)
@@ -93,6 +131,11 @@ class Converter:
                 return new_format_symbol
 
     def convert(self):
+        """
+        Method that fetch prices from binance Api
+        and calculate of quote asset amount in relative to other assets
+        @return: dictionary with converted tokens amount
+        """
         converted_amount = {}
         prices = self.get_prices()
         for coin in self.coin_list:
@@ -100,7 +143,10 @@ class Converter:
                 converted_amount[coin] = self.quote_amount
                 continue
             converted_price = prices[f'{self.quote_asset}-{coin}'] * self.quote_amount
+
+            # because No ETH token in Ethereum, arbitrum, polygon networks etc., only Wrapped ETH
             coin = 'WETH' if coin == 'ETH' else coin
+            # because No MATIC token in Polygon, only Wrapped MATIC
             coin = 'WMATIC' if coin == 'MATIC' else coin
             converted_amount[coin] = converted_price
 

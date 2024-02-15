@@ -2,7 +2,11 @@ import web3
 
 
 class Token:
-    """Base for tokens """
+    """
+    Class for ERC20 tokens
+    Contains properties describing
+    base parameters of a ERC20 token
+    """
     def __init__(self, *args, **kwargs):
         """
         @param args:
@@ -32,38 +36,60 @@ class Token:
 
     @property
     def decimals(self):
+        """
+        The number of decimals a token has
+        @return: decimals
+        """
         return self._decimals
 
     @decimals.setter
-    def decimals(self, value):
-        if not isinstance(value, int):
-            self._decimals = int(value)
+    def decimals(self, decimal_num):
+        """
+        Set the decimals' property
+        @param decimal_num: the decimal numbers of a token
+        """
+        if not isinstance(decimal_num, int):
+            self._decimals = int(decimal_num)
         else:
-            self._decimals = value
+            self._decimals = decimal_num
 
     @property
     def address(self):
+        """
+        @return: checksum token address string
+        """
         return self._address
 
     @address.setter
-    def address(self, value):
-        if not web3.Web3.is_address(value):
+    def address(self, address):
+        """
+        @param address: hexadecimal token address string
+        @raise ValueError: if address is not correct
+        """
+        if not web3.Web3.is_address(address):
             raise ValueError(f"Address must be must be a hex string starting with 0x")
-        self._address = web3.Web3.to_checksum_address(value)
+        self._address = web3.Web3.to_checksum_address(address)
 
     @property
     def symbol(self):
+        """
+        @return: symbol name
+        """
         return self._symbol
 
     @symbol.setter
     def symbol(self, symbol):
+        """
+        @param symbol: name of a symbol, like WETH, USDT, etc
+        @raise ValueError: if provided symbol is not string type
+        """
         if not isinstance(symbol, str):
             raise ValueError('Symbol must be a string!')
         self._symbol = symbol.upper()
 
 
 if __name__ == "__main__":
-    kw = {'symbol': 'tEst', 'decimals': '6', 'address': '0xfaC38532829fDD744373fdcd4708Ab90fA0c4078'}
+    kw = {'symbol': 'tEst', 'decimals': '6', 'address': '0xf0245f6251bef9447a08766b9da2b07b28ad80b0'}
     token = Token(**kw)
     print(token.symbol)
     print(token.address)

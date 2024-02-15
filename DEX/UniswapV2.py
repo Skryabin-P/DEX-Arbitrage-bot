@@ -160,17 +160,3 @@ class UniswapV2(BaseExchange):
         multicall_raw_data = self.multicall.functions.tryAggregate(
             False, self.router_calls).call()
         self.price_book = self.decode_multicall_router(multicall_raw_data)
-
-
-if __name__ == '__main__':
-    import os
-    from dotenv import load_dotenv
-
-    load_dotenv()
-    net = "Ethereum"
-    subnet = "MAINNET"
-    w3_provider = os.environ['INFURA_MAINNET']
-    client = UniswapV2(net, subnet, w3_provider)
-    client.pair_list = ['WETH-USDC', 'WBTC-Usdc']
-    print(client.pair_list)
-

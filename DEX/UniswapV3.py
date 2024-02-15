@@ -12,6 +12,13 @@ class UniswapV3(BaseExchange):
     """
 
     def __init__(self, network, subnet, web3_provider=None, fee=None, pairs=None):
+        """
+        @param network: network name like Ethereum, Arbitrum, etc
+        @param subnet: MAINNET or TESTNET
+        @param web3_provider: http/https url for connecting to rpc blockchain node
+        @param fee: commission of a pool, one of [100,500,3000,10000]
+        @param pairs: List of trading pairs in format "token0_name-token1_name"
+        """
         super().__init__(network, subnet, web3_provider, pairs)
         self._quoter = None
         self._quoter_abi_suffix = None
@@ -29,7 +36,7 @@ class UniswapV3(BaseExchange):
     @property
     def fee(self):
         """
-        pool fee, may be [100, 500, 3000, 10000] -> [0.01%, 0.05%, 0.3%, 1%]
+        pool fee, may be one of from [100, 500, 3000, 10000] -> [0.01%, 0.05%, 0.3%, 1%]
         @return: pool fee
         """
         return self._fee
@@ -42,7 +49,7 @@ class UniswapV3(BaseExchange):
         @raise ValueError:
             1. Not an integer
             2. Less than 0
-            3. Not on of [100, 500, 3000, 10000]
+            3. Not one of [100, 500, 3000, 10000]
         """
         if fee is None:
             self._fee = 3000
@@ -76,7 +83,9 @@ class UniswapV3(BaseExchange):
 
     @property
     def quoter(self):
-        # Quoter V1 or V2 contract instance on Uniswap V3
+        """
+        @return: Quoter contract instance
+        """
         if self._quoter is None:
             self._quoter = get_contract(self.web3_client,
                                         abi_name=f'{self.abi_folder}/Quoter{self.quoter_abi_suffix}',

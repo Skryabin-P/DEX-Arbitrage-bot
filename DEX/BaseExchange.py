@@ -13,7 +13,6 @@ class BaseExchange:
     Contains main properties and methods
     """
 
-
     def __init__(self, network, subnet, web3_provider=None, pairs=None):
         """
         @param network: Network name like "Ethereum", "Polygon", etc.
@@ -44,7 +43,9 @@ class BaseExchange:
             self.pair_list = pairs
     @property
     def network(self):
-        # Network name like Ethereum, Arbitrub, etc
+        """
+        @return: Network name like Ethereum, Arbitrub, etc
+        """
         return self._network
 
     @network.setter
@@ -62,7 +63,7 @@ class BaseExchange:
 
     @property
     def subnet(self):
-        # MAINNET or TESTNET
+        """ MAINNET or TESTNET """
         return self._subnet
 
     @subnet.setter
@@ -104,7 +105,9 @@ class BaseExchange:
 
     @property
     def price_book(self) -> dict:
-        # Property which contains quotes from DEX for pairs in pair_list property
+        """
+        Property which contains quotes from DEX for pairs in {pair_list} property
+        """
         return self._price_book
 
     @price_book.setter
@@ -120,7 +123,7 @@ class BaseExchange:
 
     @property
     def quote_asset_prices(self):
-        # Exchange rate between quote asset USDC, USDT, ETH and DAI
+        """Exchange rate between quote asset USDC, USDT, ETH , DAI and WMATIC"""
         return BaseExchange._quote_asset_prices
 
     @quote_asset_prices.setter

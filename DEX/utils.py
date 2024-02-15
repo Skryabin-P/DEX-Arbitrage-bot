@@ -9,6 +9,11 @@ import os
 
 
 def _get_abi(abi_name: str):
+    """
+    @param abi_name: abi name in DEX/ABI directory,
+    consisting of a folder name and a file name without json extension
+    @return: abi
+    """
     abi_path = f'{os.path.dirname(os.path.abspath(__file__))}' \
                f'/ABI/{abi_name}.json'
 
@@ -19,6 +24,19 @@ def _get_abi(abi_name: str):
 
 def get_contract_address(abi_name: str,
                          net: str, subnet: str):
+    """
+    Search in DEX/ABI/{abi_path}/contract_addresses.json for a contract address
+    where {abi_path} is a Folder name with contracts abi
+    @param abi_name: abi name in DEX/ABI directory,
+    consisting of a folder name and a file name without json extension
+    @param net: The network where contract is deployed, like Ethereum, Arbitrum, etc
+    @param subnet: The subnetwork where contract is deployed - MAINNET or TESTNET
+    @return: contract address
+    @raise ValueError:
+        1. If address is not found
+        2. If provided network name is not available
+        3. If provided subnetwork is not available
+    """
     contract_name = Path(abi_name).name
     abi_path = Path(abi_name).parent
     contract_addresses_directory = f'{os.path.dirname(os.path.abspath(__file__))}/' \
@@ -46,6 +64,16 @@ def get_contract_address(abi_name: str,
 
 def get_contract(w3: Web3 | AsyncWeb3, abi_name: str,
                  net: str = None, subnet: str = None,  address=None):
+    """
+    @param w3: Web3 instance from web3.py library
+    @param abi_name: abi name in DEX/ABI directory,
+    consisting of a folder name and a file name without json extension
+    @param net: The network where contract is deployed, like Ethereum, Arbitrum, etc
+    @param subnet: The subnetwork where contract is deployed - MAINNET or TESTNET
+    @param address: hexadecimal address string of a contract
+    @return: contract Web3 instance
+    @raise ValueError: If was provided not correct contract address
+    """
     if address is None:
         address = get_contract_address(abi_name, net, subnet)
     if not w3.is_address(address):
@@ -57,6 +85,12 @@ def get_contract(w3: Web3 | AsyncWeb3, abi_name: str,
 
 
 def get_function_abi(abi_name, func_name: str) -> ABIFunction:
+    """
+    @param abi_name: abi name in DEX/ABI directory,
+    consisting of a folder name and a file name without json extension
+    @param func_name: name of the contract function
+    @return: abi for the contract function
+    """
     abi = _get_abi(abi_name)
     for function in abi:
         if function['type'] == 'function':
@@ -65,10 +99,19 @@ def get_function_abi(abi_name, func_name: str) -> ABIFunction:
 
 
 def encode_function_abi(abi_function: ABIFunction):
+    """
+    @param abi_function: string abi of a contract function
+    @return: hex 4byte selector
+    """
     return encode_hex(function_abi_to_4byte_selector(abi_function))
 
 
 def exec_time(func):
+    """
+    Measure the function execution time
+    @param func: Function you want to measure
+    @return: provided function
+    """
     @wraps(func)
     def exec_time_wrapper(*args, **kwargs):
         start_time = time.perf_counter()

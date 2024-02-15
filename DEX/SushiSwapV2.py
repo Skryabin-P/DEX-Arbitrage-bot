@@ -2,22 +2,18 @@ from DEX.UniswapV2 import UniswapV2
 
 
 class SushiSwapV2(UniswapV2):
-    router_abi = "SushiSwapV2/Router02"
+    """
+    Child class of a UniswapV2
+    SushiSwapV2 is also a fork of UniswapV2
+    """
 
-
-if __name__ == "__main__":
-    import os
-    from dotenv import load_dotenv
-    import time
-
-    load_dotenv()
-    net = os.environ['INFURA_MAINNET']
-    client = SushiSwapV2(net)
-    print(client.pair_list)
-    client.update_price_book()
-    print(client.price_book)
-    time.sleep(1)
-    client.update_price_book()
-    print(client.price_book)
-    client.update_price_book()
-    print(client.price_book)
+    def __init__(self, network, subnet, web3_provider=None, pairs=None):
+        """
+        @param network: network name like Ethereum, Arbitrum, etc
+        @param subnet: MAINNET or TESTNET
+        @param web3_provider: http/https url for connecting to rpc blockchain node
+        @param pairs: List of trading pairs in format "token0_name-token1_name"
+        """
+        super().__init__(network, subnet, web3_provider, pairs)
+        self.router_abi = "SushiSwapV2/Router02"
+        self.factory_abi = 'SushiSwapV2/Factory'

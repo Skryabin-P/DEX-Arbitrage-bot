@@ -1,11 +1,27 @@
 from DEX.UniswapV3 import UniswapV3
 from DEX.Token import Token
 
+
 class SushiSwapV3(UniswapV3):
-    quoter_ver = "v2"
-    abi_folder = "SushiSwapV3"
-    multicall_abi = "General/multicall"
-    router_abi = 'SushiSwapV3/SwapRouter'
+    """
+    Child class of a UniswapV3
+    SushiSwap is a fork of UniswapV3
+    """
+
+    def __init__(self, network, subnet, web3_provider=None, fee=None, pairs=None):
+        """
+        @param network: network name like Ethereum, Arbitrum, etc
+        @param subnet: MAINNET or TESTNET
+        @param web3_provider: http/https url for connecting to rpc blockchain node
+        @param fee: commission of a pool, one of [100,500,3000,10000]
+        @param pairs: List of trading pairs in format "token0_name-token1_name"
+        """
+        super().__init__(network, subnet, web3_provider, fee, pairs)
+        self.quoter_ver = "v2"
+        self.multicall_abi = "General/multicall"
+        self.abi_folder = "SushiSwapV3"
+        self.router_abi = "SushiSwapV3/SwapRouter"
+        self.factory_abi = 'SushiSwapV3/Factory'
 
     def encode_buy_order(self, base_asset: Token, quote_asset: Token,
                          amount_in, amount_out, address_to, slippage):
@@ -38,21 +54,3 @@ class SushiSwapV3(UniswapV3):
         }
         return self.router.encodeABI(fn_name='exactInputSingle',
                                      args=[router_struct]), amount_out_min / 10 ** base_asset.decimals
-
-
-if __name__ == "__main__":
-    import os
-    from dotenv import load_dotenv
-
-    load_dotenv()
-    api_key = os.environ['INFURA_MAINNET']
-
-    client = SushiSwapV3('Polygon', 'MAINNET', fee=3000,
-                         )
-    client.pair_list = ['WMATIC-WETH']
-    pair = client.pair_list['WMATIC-WETH']
-    encoded = client.encode_buy_order(pair['base_asset'], pair['quote_asset'], 0.004496726383193035,
-                            11.65
-    )
-    print(encoded)
-
