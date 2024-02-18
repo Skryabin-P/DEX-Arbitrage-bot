@@ -9,7 +9,7 @@ class PancakeSwapV3(SushiSwapV3):
 
     def __init__(self, network, subnet, web3_provider=None, fee=None, pairs=None):
         """
-        @param network: network name like Ethereum, Arbitrum, etc
+        @param network: network name like Ethereum, Arbitrum, etc.
         @param subnet: MAINNET or TESTNET
         @param web3_provider: http/https url for connecting to rpc blockchain node
         @param fee: commission of a pool, one of [100,500,3000,10000]

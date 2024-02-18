@@ -80,7 +80,7 @@ class Token:
     @symbol.setter
     def symbol(self, symbol):
         """
-        @param symbol: name of a symbol, like WETH, USDT, etc
+        @param symbol: name of a symbol, like WETH, USDT, etc.
         @raise ValueError: if provided symbol is not string type
         """
         if not isinstance(symbol, str):

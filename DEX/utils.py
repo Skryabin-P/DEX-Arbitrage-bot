@@ -29,7 +29,7 @@ def get_contract_address(abi_name: str,
     where {abi_path} is a Folder name with contracts abi
     @param abi_name: abi name in DEX/ABI directory,
     consisting of a folder name and a file name without json extension
-    @param net: The network where contract is deployed, like Ethereum, Arbitrum, etc
+    @param net: The network where contract is deployed, like Ethereum, Arbitrum, etc.
     @param subnet: The subnetwork where contract is deployed - MAINNET or TESTNET
     @return: contract address
     @raise ValueError:
@@ -68,10 +68,10 @@ def get_contract(w3: Web3 | AsyncWeb3, abi_name: str,
     @param w3: Web3 instance from web3.py library
     @param abi_name: abi name in DEX/ABI directory,
     consisting of a folder name and a file name without json extension
-    @param net: The network where contract is deployed, like Ethereum, Arbitrum, etc
+    @param net: The network where contract is deployed, like Ethereum, Arbitrum, etc.
     @param subnet: The subnetwork where contract is deployed - MAINNET or TESTNET
     @param address: hexadecimal address string of a contract
-    @return: contract Web3 instance
+    @return:  Web3 contract instance
     @raise ValueError: If was provided not correct contract address
     """
     if address is None:
@@ -122,16 +122,3 @@ def exec_time(func):
         return result
 
     return exec_time_wrapper
-
-
-if __name__ == '__main__':
-    from dotenv import load_dotenv
-
-    from DEX.UniswapV2 import UniswapV2
-
-    load_dotenv()
-    INFURA_MAINNET = os.environ['INFURA_MAINNET']
-    client = UniswapV2("Ethereum", "MAINNET", web3_provider=INFURA_MAINNET)
-    usdc = get_contract(client.web3_client, 'General/multicall', "Ethereum", "Mainnet")
-    print(usdc.functions.decimals().call())
-

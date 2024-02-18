@@ -1,5 +1,6 @@
 import json
 from web3 import Web3, AsyncWeb3
+from web3.contract.contract import ContractFunction
 from DEX.utils import get_contract
 from DEX.Token import Token
 import os
@@ -12,6 +13,8 @@ class BaseExchange:
     The parent class for other Exchange classes
     Contains main properties and methods
     """
+
+    _quote_asset_prices = None
 
     def __init__(self, network, subnet, web3_provider=None, pairs=None):
         """
@@ -30,7 +33,6 @@ class BaseExchange:
         self._available_networks = None
         self.multicall_abi = 'General/multicall'
         self.factory_abi = ''
-        self._quote_asset_prices = None
         self.router_abi = ''
 
         self.name = self.__class__.__name__
@@ -41,6 +43,7 @@ class BaseExchange:
         self.web3_client_async = AsyncWeb3(Web3.AsyncHTTPProvider(self.web3_provider))
         if pairs is not None:
             self.pair_list = pairs
+
     @property
     def network(self):
         """
@@ -78,7 +81,6 @@ class BaseExchange:
             raise ValueError(f"Subnet must be {','.join(available_subnets)}"
                              f" got {subnet} instead")
         self._subnet = subnet
-
 
     @property
     def web3_provider(self):
@@ -174,7 +176,6 @@ class BaseExchange:
                                         net=self.network, subnet=self.subnet)
         return self._router
 
-
     @property
     def factory(self):
         """
@@ -259,25 +260,63 @@ class BaseExchange:
             self.pair_list = {f"{token0.symbol.upper()}-{token1.symbol.upper()}":
                                   {'base_asset': token0, 'quote_asset': token1}}
         else:
-            self._pair_list[f"{token0.symbol.upper()}-{token1.symbol.upper()}"] =\
+            self._pair_list[f"{token0.symbol.upper()}-{token1.symbol.upper()}"] = \
                 {'base_asset': token0, 'quote_asset': token1}
+
+    def build_and_send_tx(self, function: ContractFunction, tx_params, private_key):
+        """
+        Build and send transaction
+        @param function: ContractFunction to make a transaction
+        @param tx_params: a dictionary which usually contains
+        {"chainId": chain_id,
+         "from": your_address, "gas": gas, "nonce": transaction count,
+         'maxFeePerGas': Maximum amount the user is willing to pay,
+         'maxPriorityFeePerGas': Miner Tip as it is paid directly to block producers
+        @param private_key: your private key
+        @return: transaction hash
+        @raise: AttributeError if provided functions is not a ContractFunction type
+                ValueError if provided tx_params doesn't contain a "gas"
+        """
+        if not isinstance(function, ContractFunction):
+            raise AttributeError("Function must be a ContractFunction type!")
+        if "gas" not in tx_params:
+            raise ValueError("Gas must pe provided in tx_params")
+        transaction = function.build_transaction(tx_params)
+        signed_tx = self.web3_client.eth.account.sign_transaction(
+            transaction, private_key=private_key
+        )
+        return self.web3_client.eth.send_raw_transaction(signed_tx.rawTransaction)
+
+    def get_router_approval(self, token: Token, amount, tx_params, private_key):
+        """
+        Get approve for a router contract
+        :param token: Token obj that you want to be approved
+        :param amount: float amount you want to approve
+        :param tx_params:
+        :param private_key:
+        :return: a dictionary which usually contains
+        {"chainId": chain_id,
+         "from": your_address, "gas": gas, "nonce": transaction count,
+         'maxFeePerGas': Maximum amount the user is willing to pay,
+         'maxPriorityFeePerGas': Miner Tip as it is paid directly to block producers
+        @param private_key: your private key
+        @return: transaction hash
+        """
+        token_contract = get_contract(self.web3_client, "General/ERC20", address=token.address)
+        converted_amount = int(amount * 10**token.decimals)
+        approve_func = token_contract.functions.approve(self.router.address, converted_amount)
+        return self.build_and_send_tx(approve_func, tx_params, private_key)
+
+    def make_trade(self, token_in: Token, token_out: Token, amount_in,
+                   amount_out, slippage, tx_params, private_key):
+
+        converted_amount_in = int(amount_in * 10 ** token_in.decimals)
+        converted_amount_out = int(amount_out * 10 ** token_out.decimals)
+        trade_params = [token_in.address, token_out.address, converted_amount_in,
+                        converted_amount_out, ]
+
+
 
     @staticmethod
     def _deadline():
         return int(time.time()) + 60
-
-
-if __name__ == '__main__':
-    from dotenv import load_dotenv
-    from DEX.UniswapV2 import UniswapV2
-    from DEX.UniswapV3 import UniswapV3
-    from DEX.PancakeSwapV3 import PancakeSwapV3
-    from DEX.Converter import Converter
-
-    load_dotenv()
-    pairs = ['WETH-usdc', 'aave-weth']
-    infura_api_key = os.environ['INFURA_API_KEY']
-    # converter = Converter('USDC', 1000)
-    exchange = PancakeSwapV3('Ethereum', 'MAINNET', web3_provider='HTTP://127.0.0.1:7545', fee=500, slippage=0.2)
-    print(exchange.available_networks)
-

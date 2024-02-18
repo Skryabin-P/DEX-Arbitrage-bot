@@ -18,10 +18,17 @@ class AdvancedScanner:
         self.arbitrage_spreads = None
 
     def update_quote_asset_prices(self):
+        """
+        Set quote asset prices for all exchange objects
+        """
         self.exchanges[list(self.exchanges)[0]].quote_asset_prices = self.converter.convert()
 
     # @exec_time
     def update_prices(self):
+        """
+        Create and run threads for update_price_book method
+        for all passed in init exchanges
+        """
         threads = []
         for exchange in self.exchanges.values():
             thread = Thread(target=exchange.update_price_book())
@@ -33,6 +40,11 @@ class AdvancedScanner:
 
     @exec_time
     def get_edges(self):
+        """
+        Finds possible connections between vertices
+        Vertex has form  like "{exchange.name}_{pair_name}_{buy/sell}"
+        return: list of edges
+        """
         edges = []
         for exchange1, exchange2 in itertools.permutations(self.exchanges.values(), 2):
 
@@ -65,21 +77,32 @@ class AdvancedScanner:
         @param spread_threshold: Minimum potential income
         to show arbitrage opportunity in %
         """
+        # Updates quote_asset_prices for all exchanges
         self.update_quote_asset_prices()
+        # Updates pricebook of every exchange
         self.update_prices()
+
         self.arbitrage_spreads = []
+        # Creates graph with edges from get_edges method
         my_graph = DiGraph(self.get_edges())
 
+        # Finds possible arbitrage routes and calculate potential profit
         cycles = sorted(filter(lambda x: len(x) > 1, simple_cycles(my_graph, max_path_length)))
         for cycle in cycles:
             spread = self.calculate_path_income(cycle)
             if spread[1] >= spread_threshold:
                 self.arbitrage_spreads.append(spread)
 
+        # prints arbitrage table
         self.print_arbitrage_table()
 
     @exec_time
     def print_arbitrage_table(self):
+        """
+        Print on a display arbitrage table with 2 columns
+        1) PATH - arbitrage steps
+        2) Possible profit in %
+        """
         arbitrage_table = PrettyTable()
         arbitrage_table.field_names = ['PATH', 'Profit %']
         arbitrage_table.sortby = 'Profit %'
@@ -92,6 +115,12 @@ class AdvancedScanner:
         print(arbitrage_table)
 
     def calculate_path_income(self, path):
+        """
+        Calculates profit of a certain arbitrage path
+        :param path: List of arbitrage steps
+        :return: path_preview like "SushiSwapV3/500_WMATIC-WETH_sell -> UniswapV3/500_WMATIC-WETH_buy",
+        and profit in percents
+        """
         initial_amount = None
         amount_in = None
         path_preview = {}

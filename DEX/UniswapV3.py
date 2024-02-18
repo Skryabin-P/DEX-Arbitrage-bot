@@ -13,7 +13,7 @@ class UniswapV3(BaseExchange):
 
     def __init__(self, network, subnet, web3_provider=None, fee=None, pairs=None):
         """
-        @param network: network name like Ethereum, Arbitrum, etc
+        @param network: network name like Ethereum, Arbitrum, etc.
         @param subnet: MAINNET or TESTNET
         @param web3_provider: http/https url for connecting to rpc blockchain node
         @param fee: commission of a pool, one of [100,500,3000,10000]
@@ -264,11 +264,3 @@ class UniswapV3(BaseExchange):
         multicall_raw_data = self.multicall.functions.tryAggregate(
             False, self.quoter_calls).call()
         self.price_book = self.decode_multicall_quoter(multicall_raw_data)
-
-
-if __name__ == '__main__':
-    import os
-    from dotenv import load_dotenv
-
-    load_dotenv()
-    api_key = os.environ['INFURA_API_KEY']
