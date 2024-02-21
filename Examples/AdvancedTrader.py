@@ -98,9 +98,14 @@ class AdvancedTrader:
                 continue
 
     def encode_trade(self, step, prices, amount_in=None):
-        # encode order, approve
-        # returns encoded order, approve, amount_out_min,
-        # quote asset in this trade and router address
+        """
+        Encode order and approve function
+        @param step: arbitrage step
+        @param prices: quotes for this step
+        @param amount_in:
+        @return: returns encoded order, approve, amount_out_min,
+        quote asset in this trade and router address
+        """
         exchange_name, pair, action = step.split('_')
         exchange = self.exchanges[exchange_name]
         if not amount_in:
@@ -154,8 +159,8 @@ if __name__ == "__main__":
 
     net = "Polygon"
     subnet = "MAINNET"
-    address = os.environ['address']
-    private_key = os.environ['private_key']
+    address = os.environ['WALLET_ADDRESS']
+    private_key = os.environ['PRIVATE_KEY']
     web3_provider = os.environ['INFURA_POLYGON']
     uniswap_v3_pools_3000 = ['WMATIC-WETH', 'WETH-USDC', 'WBTC-WETH', 'WMATIC-USDC', 'LINK-WETH', 'WETH-USDT']
     uniswap_v3_pools_500 = ['WMATIC-WETH', 'WETH-USDC', 'WBTC-WETH', 'WMATIC-USDC', 'LINK-WETH', 'WETH-USDT']
@@ -174,7 +179,4 @@ if __name__ == "__main__":
                             sushi3_3000, sushi3_500, quote_asset='USDC', quote_amount=100, address=address,
                             private_key=private_key, thd=0.4, slippage=slippage)
     trader.arbitrage()
-
-    # TODO: put pools with different comissions in one object,
-    #  add more exchanges
 

@@ -274,7 +274,7 @@ class BaseExchange:
          'maxPriorityFeePerGas': Miner Tip as it is paid directly to block producers
         @param private_key: your private key
         @return: transaction hash
-        @raise: AttributeError if provided functions is not a ContractFunction type
+        @raise: AttributeError if provided function is not a ContractFunction type
                 ValueError if provided tx_params doesn't contain a "gas"
         """
         if not isinstance(function, ContractFunction):
@@ -285,16 +285,17 @@ class BaseExchange:
         signed_tx = self.web3_client.eth.account.sign_transaction(
             transaction, private_key=private_key
         )
-        return self.web3_client.eth.send_raw_transaction(signed_tx.rawTransaction)
+        tx_hash = self.web3_client.eth.send_raw_transaction(signed_tx.rawTransaction)
+        return self.web3_client.to_hex(tx_hash)
 
     def get_router_approval(self, token: Token, amount, tx_params, private_key):
         """
         Get approve for a router contract
-        :param token: Token obj that you want to be approved
-        :param amount: float amount you want to approve
-        :param tx_params:
-        :param private_key:
-        :return: a dictionary which usually contains
+        @param token: Token obj that you want to be approved
+        @param amount: float amount you want to approve
+        @param tx_params:
+        @param private_key:
+        @param tx_params: a dictionary which usually contains
         {"chainId": chain_id,
          "from": your_address, "gas": gas, "nonce": transaction count,
          'maxFeePerGas': Maximum amount the user is willing to pay,
@@ -307,13 +308,7 @@ class BaseExchange:
         approve_func = token_contract.functions.approve(self.router.address, converted_amount)
         return self.build_and_send_tx(approve_func, tx_params, private_key)
 
-    def make_trade(self, token_in: Token, token_out: Token, amount_in,
-                   amount_out, slippage, tx_params, private_key):
 
-        converted_amount_in = int(amount_in * 10 ** token_in.decimals)
-        converted_amount_out = int(amount_out * 10 ** token_out.decimals)
-        trade_params = [token_in.address, token_out.address, converted_amount_in,
-                        converted_amount_out, ]
 
 
 

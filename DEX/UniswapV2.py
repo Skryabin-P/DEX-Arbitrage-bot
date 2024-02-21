@@ -160,3 +160,34 @@ class UniswapV2(BaseExchange):
         multicall_raw_data = self.multicall.functions.tryAggregate(
             False, self.router_calls).call()
         self.price_book = self.decode_multicall_router(multicall_raw_data)
+
+    def make_trade(self, token_in: Token, token_out: Token, recipient, amount_in,
+                   amount_out, slippage, tx_params, private_key):
+        """
+        Create and send trading transaction using swapExactTokensForTokens
+        function of a Router02 contract
+
+        @param token_in: Token obj that you want to sell
+        @param token_out: Token obj that you want to buy
+        @param recipient: address which will get tokens after exchange
+        @param amount_in: amount of token in
+        @param amount_out: desire amount of token out
+        @param slippage: from 0 to 1, the difference between the expected price
+        of a trade and the price at which the trade is executed
+        @param tx_params: a dictionary which usually contains
+        {"chainId": chain_id,
+         "from": your_address, "gas": gas, "nonce": transaction count,
+         'maxFeePerGas': Maximum amount the user is willing to pay,
+         'maxPriorityFeePerGas': Miner Tip as it is paid directly to block producers
+        @param private_key: private key of your address
+        @return: transaction hash
+        """
+        converted_amount_in = int(amount_in * 10 ** token_in.decimals)
+        amount_out_min = (1 - slippage) * amount_out
+        converted_amount_out_min = int(amount_out_min * 10 ** token_out.decimals)
+        path = [token_in.address, token_out.address]
+        trade_params = [converted_amount_in, converted_amount_out_min,
+                        path, recipient, self._deadline()]
+        trade_func = self.router.functions.swapExactTokensForTokens(trade_params)
+
+        return self.build_and_send_tx(trade_func, tx_params, private_key)
