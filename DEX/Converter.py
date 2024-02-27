@@ -1,5 +1,6 @@
 import requests
 from numbers import Real
+from DEX.constants import BINANCE_API_URL, BINANCE_SYMBOLS, DEX_QUOTE_ASSETS
 
 
 class Converter:
@@ -15,11 +16,11 @@ class Converter:
         @param quote_amount: amount of quote_asset
         """
         self._symbols = None
-        self.symbols = ['ETHUSDC', 'ETHUSDT', 'ETHDAI', 'USDCUSDT', 'USDTDAI',
-                        'MATICUSDC', 'MATICETH', 'MATICUSDT']
+        self.symbols = BINANCE_SYMBOLS
         self.quote_asset = quote_asset
         self.quote_amount = quote_amount
-        self.coin_list = ['ETH', 'USDC', 'DAI', 'USDT', 'MATIC', 'USDC.E']
+        self.coin_list = DEX_QUOTE_ASSETS
+        self.matic_price = None
 
     @property
     def symbols(self):
@@ -91,10 +92,8 @@ class Converter:
         and put it to a dictionary
         @return: prices dictionary
         """
-        url = f'https://api-gcp.binance.com/api/v3/' \
-              f'ticker/price'
         params = {"symbols": f'[{self.symbols}]'}
-        raw_response = requests.get(url, params=params).json()
+        raw_response = requests.get(BINANCE_API_URL, params=params).json()
         prices = {}
         for symbol in raw_response:
             prices[self._convert_binance_symbol_format(

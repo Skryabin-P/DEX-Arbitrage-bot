@@ -3,6 +3,7 @@ from web3 import Web3, AsyncWeb3
 from web3.contract.contract import ContractFunction
 from DEX.utils import get_contract
 from DEX.Token import Token
+from DEX.constants import AVAILABLE_SUBNETS
 import os
 from urllib.parse import urlparse
 import time
@@ -14,6 +15,7 @@ class BaseExchange:
     Contains main properties and methods
     """
 
+    # The same for all child classes
     _quote_asset_prices = None
 
     def __init__(self, network, subnet, web3_provider=None, pairs=None):
@@ -39,7 +41,7 @@ class BaseExchange:
         self.network = network
         self.subnet = subnet
         self.web3_provider = web3_provider
-        self.web3_client = Web3(Web3.HTTPProvider(self.web3_provider, request_kwargs={'timeout': 600}))
+        self.web3_client = Web3(Web3.HTTPProvider(self.web3_provider))
         self.web3_client_async = AsyncWeb3(Web3.AsyncHTTPProvider(self.web3_provider))
         if pairs is not None:
             self.pair_list = pairs
@@ -76,9 +78,8 @@ class BaseExchange:
         @param subnet: name of the subnet, may be MAINNET or TESTNET
         @raise ValueError: If passed subnet not MAINNET or TESTNET
         """
-        available_subnets = ['MAINNET', 'TESTNET']
-        if subnet not in available_subnets:
-            raise ValueError(f"Subnet must be {','.join(available_subnets)}"
+        if subnet not in AVAILABLE_SUBNETS:
+            raise ValueError(f"Subnet must be {','.join(AVAILABLE_SUBNETS)}"
                              f" got {subnet} instead")
         self._subnet = subnet
 

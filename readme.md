@@ -158,7 +158,7 @@ print(trade_transaction_hash)
 ```
 4. Example of arbitrage scanner you can see in `Examples\AdvancedScanner.py`
 
-   To run this script create `.env` file and add enviroment variable `INFURA_POLYGON`
+   To run this script create `.env` file and add environment variable `INFURA_POLYGON`
    
    Get free rpc url for polygon network on https://infura.io
 
@@ -188,7 +188,7 @@ $ python AdvancedScanner.py
 |     UniswapV3/500_WBTC-WETH_buy -> SushiSwapV2_WBTC-WETH_sell -> UniswapV3/500_WMATIC-WETH_buy -> SushiSwapV3/500_WMATIC-WETH_sell     | -0.21765473653527304 |
 |                                   UniswapV3/500_WMATIC-WETH_sell -> SushiSwapV3/500_WMATIC-WETH_buy                                    | -0.2341433782961431  |
    ```
-5. Example of my arbitrage bot which use my smart contract which gets flash loan from [Aave](https://aave.com/) and make trades in one transaction.
+5. Example of my arbitrage bot which uses my smart contract which gets flash loan from [Aave](https://aave.com/) and makes trades in one transaction.
    You can see in `Examples\AdvancedTrader.py`
    You can find contract code in this repo https://github.com/Skryabin-P/Arbitrage-Contract It's not perfect, but works.
 
