@@ -173,7 +173,7 @@ if __name__ == "__main__":
     sushi3_3000 = SushiSwapV3(net, subnet, web3_provider, 3000, sushi3_pools_3000)
     sushi3_500 = SushiSwapV3(net, subnet, web3_provider, 500, sushi3_pools_500)
     sushi2 = SushiSwapV2(net, subnet, web3_provider, sushi2_pairs)
-
+    uniswapV3_500.a
     scanner = AdvancedScanner(uniswapV3_500, uniswapV3_3000, sushi2, sushi3_500, sushi3_3000,
                               quote_asset='USDC', quote_amount=100)
     while True:
