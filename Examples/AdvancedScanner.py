@@ -5,6 +5,8 @@ from prettytable import PrettyTable
 from DEX.Converter import Converter
 from networkx import DiGraph, simple_cycles
 
+from PoolsParser.Parser import PoolsParser
+
 
 class AdvancedScanner:
     def __init__(self, *exchanges, quote_asset: str, quote_amount):
@@ -161,22 +163,30 @@ if __name__ == "__main__":
     net = "Polygon"
     subnet = "MAINNET"
     web3_provider = os.environ['INFURA_POLYGON']
+    parse_net = 'polygon_pos'
 
-    uniswap_v3_pools_3000 = ['WMATIC-WETH', 'WETH-USDC', 'WBTC-WETH', 'WMATIC-USDC', 'LINK-WETH', 'WETH-USDT']
-    uniswap_v3_pools_500 = ['WMATIC-WETH', 'WETH-USDC', 'WBTC-WETH', 'WMATIC-USDC', 'LINK-WETH', 'WETH-USDT']
-    sushi3_pools_3000 = ['WMATIC-WETH', 'WETH-USDC', 'WBTC-WETH', 'WMATIC-USDC', 'LINK-WETH', 'WETH-USDT']
-    sushi3_pools_500 = ['WMATIC-WETH', 'WETH-USDC', 'WBTC-WETH', 'WMATIC-USDC', 'LINK-WETH', 'WETH-USDT']
-    sushi2_pairs = ['WMATIC-WETH', 'WETH-USDC', 'WBTC-WETH', 'WMATIC-USDC', 'LINK-WETH', 'WETH-USDT']
+    from PoolsParser.Parser import PoolsParser
 
-    uniswapV3_3000 = UniswapV3(net, subnet, web3_provider, 3000, uniswap_v3_pools_3000)
-    uniswapV3_500 = UniswapV3(net, subnet, web3_provider, 500, uniswap_v3_pools_500)
-    sushi3_3000 = SushiSwapV3(net, subnet, web3_provider, 3000, sushi3_pools_3000)
-    sushi3_500 = SushiSwapV3(net, subnet, web3_provider, 500, sushi3_pools_500)
-    sushi2 = SushiSwapV2(net, subnet, web3_provider, sushi2_pairs)
-    uniswapV3_500.a
-    scanner = AdvancedScanner(uniswapV3_500, uniswapV3_3000, sushi2, sushi3_500, sushi3_3000,
-                              quote_asset='USDC', quote_amount=100)
+    uniswap_v3_parser = PoolsParser(parse_net, 'uniswap_v3_polygon_pos', pg_number=1)
+    sushi3_parser = PoolsParser(parse_net, 'sushiswap-v3-polygon', pg_number=1)
+    sushi2_parser = PoolsParser(parse_net, 'sushiswap_polygon_pos', pg_number=1)
+
+
+    uniswapV3_3000 = UniswapV3(net, subnet, web3_provider, 3000)
+    uniswapV3_3000.add_pools(uniswap_v3_parser.top_pools[3000])
+    uniswapV3_500 = UniswapV3(net, subnet, web3_provider, 500, )
+    uniswapV3_500.add_pools(uniswap_v3_parser.top_pools[500])
+    sushi3_3000 = SushiSwapV3(net, subnet, web3_provider, 3000, )
+    sushi3_3000.add_pools(sushi3_parser.top_pools[3000])
+    sushi3_100 = SushiSwapV3(net, subnet, web3_provider, 100, )
+    s3_100  = sushi3_parser.top_pools[100]
+    sushi3_100.add_pools(s3_100)
+    sushi2 = SushiSwapV2(net, subnet, web3_provider, )
+    sushi2.add_pools(sushi2_parser.top_pools[3000])
+    print(sushi3_100.pair_list)
+    scanner = AdvancedScanner(uniswapV3_500, uniswapV3_3000, sushi2, sushi3_100, sushi3_3000,
+                              quote_asset='USDC', quote_amount=10)
     while True:
-        scanner.scan(spread_threshold=-0.4, max_path_length=4)
+        scanner.scan(spread_threshold=-20, max_path_length=4)
         time.sleep(10)
 

@@ -1,17 +1,20 @@
 import requests
 import os
 import json
-from utils import get_tokens_batches
+from PoolsParser.utils import get_tokens_batches
 
 
 class PoolsParser:
     def __init__(self, network: str, exchange: str, pg_number: int = 1) -> None:
+        self._url = 'https://api.geckoterminal.com/api/v2'
+        self._abs_path = os.path.abspath(os.path.dirname(__file__))
+        self.pg_number = pg_number
         self.network = network
         self.exchange = exchange
+        self._pools_path = f'{self._abs_path}/pools/{self.network}/{self.exchange}.json'
+        self._tokens_path = f'{self._abs_path}/tokens/{self.network}/{self.exchange}.json'
         self.pg_number = pg_number
-        self._url = 'https://api.geckoterminal.com/api/v2'
-        self._pools_path = f'pools/{self.network}/{self.exchange}.json'
-        self._tokens_path = f'tokens/{self.network}/{self.exchange}.json'
+
 
     def _get(self, endpoint: str, params: dict = None) -> json:
         headers = {'Accept': 'application/json;version=20230302'}
@@ -50,15 +53,15 @@ class PoolsParser:
     @property
     def available_exchanges(self):
         available_exchanges = []
-        if not os.path.isdir('resources'):
-            os.mkdir('resources')
-        if not os.path.isfile(f'resources/available_exchanges_{self.network}.json'):
+        if not os.path.isdir(f'{self._abs_path}/resources'):
+            os.mkdir(f'{self._abs_path}/resources')
+        if not os.path.isfile(f'{self._abs_path}/resources/available_exchanges_{self.network}.json'):
             endpoint = f'/networks/{self.network}/dexes'
             data = self._get(endpoint)
-            with open(f'resources/available_exchanges_{self.network}.json', 'w') as file:
+            with open(f'{self._abs_path}/resources/available_exchanges_{self.network}.json', 'w') as file:
                 json.dump(data, file, indent=4)
 
-        with open(f'resources/available_exchanges_{self.network}.json', 'r') as file:
+        with open(f'{self._abs_path}/resources/available_exchanges_{self.network}.json', 'r') as file:
             exchanges = json.load(file)
         for exchange in exchanges['data']:
             available_exchanges.append(exchange['id'])
@@ -67,15 +70,15 @@ class PoolsParser:
     @property
     def available_networks(self) -> list:
         available_networks = []
-        if not os.path.isdir('resources'):
-            os.mkdir('resources')
-        if not os.path.isfile(f'resources/available_networks.json'):
+        if not os.path.isdir(f'{self._abs_path}/resources'):
+            os.mkdir(f'{self._abs_path}/resources')
+        if not os.path.isfile(f'{self._abs_path}/resources/available_networks.json'):
             endpoint = f'/networks'
             data = self._get(endpoint)
-            with open(f'resources/available_networks.json', 'w') as file:
+            with open(f'{self._abs_path}/resources/available_networks.json', 'w') as file:
                 json.dump(data, file, indent=4)
 
-        with open(f'resources/available_networks.json', 'r') as file:
+        with open(f'{self._abs_path}/resources/available_networks.json', 'r') as file:
             networks = json.load(file)
         for network in networks['data']:
             available_networks.append(network['id'])
@@ -85,12 +88,12 @@ class PoolsParser:
         endpoint = f'/networks/{self.network}/dexes/{self.exchange}/pools'
         data = self._get(endpoint, params={'page': self.pg_number})
         raw_pools = data['data']
-        if not os.path.isdir(f'pools'):
-            os.mkdir(f'pools')
-        if not os.path.isdir(f'pools/{self.network}'):
-            os.mkdir(f'pools/{self.network}')
+        if not os.path.isdir(f'{self._abs_path}/pools'):
+            os.mkdir(f'{self._abs_path}/pools')
+        if not os.path.isdir(f'{self._abs_path}/pools/{self.network}'):
+            os.mkdir(f'{self._abs_path}/pools/{self.network}')
         pools = self.prepare_pools_data(raw_pools)
-        with open(f'pools/{self.network}/{self.exchange}.json', 'w') as file:
+        with open(self._pools_path, 'w') as file:
             json.dump(pools, file, indent=4)
 
         return pools
@@ -122,8 +125,8 @@ class PoolsParser:
         for pool in raw_pools:
             pools[pool['attributes']['name']] = {
                 'pool_address': pool['attributes']['address'],
-                'base_token': pool['relationships']['base_token']['data']['id'].split('_')[1],
-                'quote_token': pool['relationships']['quote_token']['data']['id'].split('_')[1],
+                'base_token': pool['relationships']['base_token']['data']['id'].split('_')[-1],
+                'quote_token': pool['relationships']['quote_token']['data']['id'].split('_')[-1],
             }
         return pools
 
@@ -141,10 +144,10 @@ class PoolsParser:
                 'decimals': token['attributes']['decimals'],
             }
 
-        if not os.path.isdir(f'tokens'):
-            os.mkdir(f'tokens')
-        if not os.path.isdir(f'tokens/{self.network}'):
-            os.mkdir(f'tokens/{self.network}')
+        if not os.path.isdir(f'{self._abs_path}/tokens'):
+            os.mkdir(f'{self._abs_path}/tokens')
+        if not os.path.isdir(f'{self._abs_path}/tokens/{self.network}'):
+            os.mkdir(f'{self._abs_path}/tokens/{self.network}')
 
         with open(self._tokens_path, 'w') as file:
             json.dump(tokens, file, indent=4)
@@ -161,9 +164,12 @@ class PoolsParser:
 
     @property
     def top_pools(self):
-        top_pools = []
+        top_pools = {100: [], 500: [], 3000: [], 10000: []}
         for pool in self.pools.items():
-            commission = self.commission_map[pool[0].split()[3]]
+            if len(pool[0].split()) > 3:
+                commission = self.commission_map[pool[0].split()[3]]
+            else:
+                commission = 3000
             base_token = self.tokens.get(pool[1]['base_token'], None)
             quote_token = self.tokens.get(pool[1]['quote_token'], None)
             if base_token and quote_token:
@@ -173,9 +179,10 @@ class PoolsParser:
                     'quote_token': quote_token,
                     'commission': commission
                 }
-                top_pools.append(temp_pool)
+                top_pools[commission].append(temp_pool)
 
         return top_pools
+
 
 
 if __name__ == '__main__':

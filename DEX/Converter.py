@@ -147,6 +147,7 @@ class Converter:
             coin = 'WETH' if coin == 'ETH' else coin
             # because No MATIC token in Polygon, only Wrapped MATIC
             coin = 'WMATIC' if coin == 'MATIC' else coin
+            coin = 'WBTC' if coin == 'BTC' else coin
             converted_amount[coin] = converted_price
 
         return converted_amount

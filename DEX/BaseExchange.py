@@ -1,4 +1,6 @@
 import json
+from typing import Any
+
 from web3 import Web3, AsyncWeb3
 from web3.contract.contract import ContractFunction
 from DEX.utils import get_contract
@@ -258,11 +260,25 @@ class BaseExchange:
 
         if self._pair_list is None:
 
-            self.pair_list = {f"{token0.symbol.upper()}-{token1.symbol.upper()}":
+            self._pair_list = {f"{token0.symbol.upper()}-{token1.symbol.upper()}":
                                   {'base_asset': token0, 'quote_asset': token1}}
         else:
             self._pair_list[f"{token0.symbol.upper()}-{token1.symbol.upper()}"] = \
                 {'base_asset': token0, 'quote_asset': token1}
+
+    def add_pools(self, pools: list[dict[str, Any]]):
+        for pool in pools:
+            if not isinstance(pool, dict):
+                raise ValueError(f'pool must be an instance of dict, got {type(pool)} instead')
+            token0 = Token(**pool['base_token'])
+            token1 = Token(**pool['quote_token'])
+            av_quote_asset = ['WETH', 'USDC', 'DAI', 'USDT', 'WMATIC', 'USDC.E', 'WBTC']
+            if token1.symbol in av_quote_asset:
+                self.add_pair(token0, token1)
+            else:
+                if token0.symbol in av_quote_asset:
+                    self.add_pair(token1, token0)
+
 
     def build_and_send_tx(self, function: ContractFunction, tx_params, private_key):
         """
