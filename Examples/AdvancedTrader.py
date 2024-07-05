@@ -15,10 +15,12 @@ from operator import itemgetter
 class AdvancedTrader:
     w3: Web3
 
-    def __init__(self, *exchanges, quote_asset, quote_amount, address, private_key, thd, slippage):
+    def __init__(self, *exchanges, quote_asset, quote_amount,
+                 address, private_key, thd, slippage):
         self.exchanges = {exchange.name: exchange for exchange in exchanges}
         self.scanner = AdvancedScanner(*exchanges, quote_asset=quote_asset, quote_amount=quote_amount)
         self.converter = Converter(quote_asset, quote_amount)
+        self.converter.convert()
         self.address = address
         self.private_key = private_key
         self.w3 = exchanges[0].web3_client
@@ -79,7 +81,7 @@ class AdvancedTrader:
                             signed_tx = self.w3.eth.account.sign_transaction(request_flashloan,
                                                                              private_key=self.private_key)
 
-                            send_tx = self.w3.eth.send_raw_transaction(signed_tx.rawTransaction)
+                            send_tx = self.w3.eth.send_raw_transaction(signed_tx.raw_transaction)
                             tx_receipt = self.w3.eth.wait_for_transaction_receipt(send_tx)
                             print(tx_receipt)
                             time.sleep(1)
@@ -120,8 +122,8 @@ class AdvancedTrader:
             amount_out = prices[0] * amount_in
 
         order, amount_out_min = exchange.encode_buy_order(
-            base_asset, quote_asset, amount_in, amount_out, self.slippage)
-        approve = exchange.encode_router_approve(quote_asset, amount_in)
+            base_asset, quote_asset, amount_in, amount_out, self.arbitrage_contract.address, self.slippage)
+        approve = exchange.encode_router_approval(quote_asset, amount_in)
         approve = codecs.decode(approve[2:], 'hex_codec')
         order = codecs.decode(order[2:], 'hex_codec')
         router_address = exchange.router.address
@@ -156,27 +158,45 @@ if __name__ == "__main__":
     import os
 
     load_dotenv()
-
     net = "Polygon"
     subnet = "MAINNET"
-    address = os.environ['WALLET_ADDRESS']
-    private_key = os.environ['PRIVATE_KEY']
     web3_provider = os.environ['INFURA_POLYGON']
-    uniswap_v3_pools_3000 = ['WMATIC-WETH', 'WETH-USDC', 'WBTC-WETH', 'WMATIC-USDC', 'LINK-WETH', 'WETH-USDT']
-    uniswap_v3_pools_500 = ['WMATIC-WETH', 'WETH-USDC', 'WBTC-WETH', 'WMATIC-USDC', 'LINK-WETH', 'WETH-USDT']
-    sushi3_pools_3000 = ['WMATIC-WETH', 'WETH-USDC', 'WBTC-WETH', 'WMATIC-USDC', 'LINK-WETH', 'WETH-USDT']
-    sushi3_pools_500 = ['WMATIC-WETH', 'WETH-USDC', 'WBTC-WETH', 'WMATIC-USDC', 'LINK-WETH', 'WETH-USDT']
-    sushi2_pairs = ['WMATIC-WETH', 'WETH-USDC', 'WBTC-WETH', 'WMATIC-USDC', 'LINK-WETH', 'WETH-USDT']
+    private_key = os.environ['PRIVATE_KEY']
+    address = os.environ['WALLET_ADDRESS']
+    parse_net = 'polygon_pos'
+
+    from PoolsParser.Parser import PoolsParser
+
+    uniswap_v3_parser = PoolsParser(parse_net, 'uniswap_v3_polygon_pos', pg_number=7)
+    sushi3_parser = PoolsParser(parse_net, 'sushiswap-v3-polygon', pg_number=7)
+    sushi2_parser = PoolsParser(parse_net, 'sushiswap_polygon_pos', pg_number=7)
+
+    uniswapV3_10000 = UniswapV3(net, subnet, web3_provider, fee=10000)
+    uniswapV3_10000.add_pools(uniswap_v3_parser.top_pools[10000])
+    uniswapV3_3000 = UniswapV3(net, subnet, web3_provider, 3000)
+    uniswapV3_3000.add_pools(uniswap_v3_parser.top_pools[3000])
+    uniswapV3_500 = UniswapV3(net, subnet, web3_provider, 500, )
+    uniswapV3_500.add_pools(uniswap_v3_parser.top_pools[500])
+    uniswapV3_100 = UniswapV3(net, subnet, web3_provider, 100, )
+    uniswapV3_100.add_pools(uniswap_v3_parser.top_pools[100])
+    sushi3_10000 = SushiSwapV3(net, subnet, web3_provider, 10000)
+    sushi3_10000.add_pools(sushi3_parser.top_pools[10000])
+    sushi3_3000 = SushiSwapV3(net, subnet, web3_provider, 3000, )
+    sushi3_3000.add_pools(sushi3_parser.top_pools[3000])
+
+    sushi3_500 = SushiSwapV3(net, subnet, web3_provider, 500, )
+    sushi3_500.add_pools(sushi3_parser.top_pools[500])
+
+    sushi3_100 = SushiSwapV3(net, subnet, web3_provider, 100, )
+    s3_100 = sushi3_parser.top_pools[100]
+    sushi3_100.add_pools(s3_100)
+    sushi2 = SushiSwapV2(net, subnet, web3_provider, )
+    sushi2.add_pools(sushi2_parser.top_pools[3000])
 
     slippage = 0.001
-    uniswapV3_3000 = UniswapV3(net, subnet, web3_provider, 3000, uniswap_v3_pools_3000)
-    uniswapV3_500 = UniswapV3(net, subnet, web3_provider, 500, uniswap_v3_pools_500)
-    sushi3_3000 = SushiSwapV3(net, subnet, web3_provider, 3000, sushi3_pools_3000)
-    sushi3_500 = SushiSwapV3(net, subnet, web3_provider, 500, sushi3_pools_500)
-    sushi2 = SushiSwapV2(net, subnet, web3_provider, sushi2_pairs)
 
-    trader = AdvancedTrader(uniswapV3_3000, uniswapV3_500, sushi2,
-                            sushi3_3000, sushi3_500, quote_asset='USDC', quote_amount=100, address=address,
-                            private_key=private_key, thd=0.4, slippage=slippage)
+    trader = AdvancedTrader(uniswapV3_10000, uniswapV3_3000, uniswapV3_500, uniswapV3_100, sushi2,
+                            sushi3_10000, sushi3_3000, sushi3_500, sushi3_100, quote_asset='USDC',
+                            quote_amount=10, address=address,
+                            private_key=private_key, thd=0.2, slippage=slippage)
     trader.arbitrage()
-

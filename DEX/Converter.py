@@ -155,4 +155,5 @@ class Converter:
 
 if __name__ == "__main__":
     converter = Converter('USDC', 100.585)
-    print(converter.convert())
+    converter.convert()
+    print(converter.matic_price)

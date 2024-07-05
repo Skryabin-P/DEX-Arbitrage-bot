@@ -73,7 +73,7 @@ class AdvancedScanner:
                         edges.append((base_vertex2, sec_vertex2))
         return edges
 
-    def scan(self, spread_threshold=-0.2, max_path_length=4):
+    def scan(self, spread_threshold=-0.05, max_path_length=4):
         """
         @param max_path_length: Max amount of steps in arbitrage
         @param spread_threshold: Minimum potential income
@@ -167,26 +167,32 @@ if __name__ == "__main__":
 
     from PoolsParser.Parser import PoolsParser
 
-    uniswap_v3_parser = PoolsParser(parse_net, 'uniswap_v3_polygon_pos', pg_number=1)
-    sushi3_parser = PoolsParser(parse_net, 'sushiswap-v3-polygon', pg_number=1)
-    sushi2_parser = PoolsParser(parse_net, 'sushiswap_polygon_pos', pg_number=1)
+    uniswap_v3_parser = PoolsParser(parse_net, 'uniswap_v3_polygon_pos', pg_number=7)
+    sushi3_parser = PoolsParser(parse_net, 'sushiswap-v3-polygon', pg_number=7)
+    sushi2_parser = PoolsParser(parse_net, 'sushiswap_polygon_pos', pg_number=7)
 
-
+    uniswapV3_10000 = UniswapV3(net, subnet,web3_provider, fee=10000)
+    uniswapV3_10000.add_pools(uniswap_v3_parser.top_pools[10000])
     uniswapV3_3000 = UniswapV3(net, subnet, web3_provider, 3000)
     uniswapV3_3000.add_pools(uniswap_v3_parser.top_pools[3000])
     uniswapV3_500 = UniswapV3(net, subnet, web3_provider, 500, )
     uniswapV3_500.add_pools(uniswap_v3_parser.top_pools[500])
+    uniswapV3_100 = UniswapV3(net, subnet, web3_provider, 100, )
+    uniswapV3_100.add_pools(uniswap_v3_parser.top_pools[100])
+    sushi3_10000 = SushiSwapV3(net, subnet, web3_provider, 10000)
+    sushi3_10000.add_pools(sushi3_parser.top_pools[10000])
     sushi3_3000 = SushiSwapV3(net, subnet, web3_provider, 3000, )
     sushi3_3000.add_pools(sushi3_parser.top_pools[3000])
     sushi3_100 = SushiSwapV3(net, subnet, web3_provider, 100, )
-    s3_100  = sushi3_parser.top_pools[100]
+    s3_100 = sushi3_parser.top_pools[100]
     sushi3_100.add_pools(s3_100)
     sushi2 = SushiSwapV2(net, subnet, web3_provider, )
     sushi2.add_pools(sushi2_parser.top_pools[3000])
     print(sushi3_100.pair_list)
-    scanner = AdvancedScanner(uniswapV3_500, uniswapV3_3000, sushi2, sushi3_100, sushi3_3000,
+    scanner = AdvancedScanner(uniswapV3_100, uniswapV3_500, uniswapV3_3000, uniswapV3_10000, sushi2,
+                              sushi3_100, sushi3_3000, sushi3_10000,
                               quote_asset='USDC', quote_amount=10)
     while True:
-        scanner.scan(spread_threshold=-20, max_path_length=4)
+        scanner.scan(spread_threshold=-0.1, max_path_length=4)
         time.sleep(10)
 

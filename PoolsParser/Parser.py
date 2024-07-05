@@ -13,7 +13,7 @@ class PoolsParser:
         self.exchange = exchange
         self._pools_path = f'{self._abs_path}/pools/{self.network}/{self.exchange}.json'
         self._tokens_path = f'{self._abs_path}/tokens/{self.network}/{self.exchange}.json'
-        self.pg_number = pg_number
+
 
 
     def _get(self, endpoint: str, params: dict = None) -> json:
@@ -86,8 +86,10 @@ class PoolsParser:
 
     def refresh_pools(self) -> json:
         endpoint = f'/networks/{self.network}/dexes/{self.exchange}/pools'
-        data = self._get(endpoint, params={'page': self.pg_number})
-        raw_pools = data['data']
+        raw_pools = []
+        for page in range(1, self.pg_number + 1):
+            data = self._get(endpoint, params={'page': page})
+            raw_pools.extend(data['data'])
         if not os.path.isdir(f'{self._abs_path}/pools'):
             os.mkdir(f'{self._abs_path}/pools')
         if not os.path.isdir(f'{self._abs_path}/pools/{self.network}'):
@@ -138,8 +140,12 @@ class PoolsParser:
             raw_tokens_batch = self._get(endpoint + '%2C'.join(batch))['data']
             raw_tokens.extend(raw_tokens_batch)
         for token in raw_tokens:
+            symbol = token['attributes']['symbol']
+            if symbol == 'USDC':
+                if token['attributes']['name'] == 'USD Coin (PoS)':
+                    symbol = 'USDC.E'
             tokens[token['attributes']['address']] = {
-                'symbol': token['attributes']['symbol'],
+                'symbol': symbol,
                 'address': token['attributes']['address'],
                 'decimals': token['attributes']['decimals'],
             }
@@ -167,7 +173,9 @@ class PoolsParser:
         top_pools = {100: [], 500: [], 3000: [], 10000: []}
         for pool in self.pools.items():
             if len(pool[0].split()) > 3:
-                commission = self.commission_map[pool[0].split()[3]]
+                # if pool[0].split()[3] == 'WMATIC':
+                #     print(1)
+                commission = self.commission_map.get(pool[0].split()[3], 3000)
             else:
                 commission = 3000
             base_token = self.tokens.get(pool[1]['base_token'], None)
